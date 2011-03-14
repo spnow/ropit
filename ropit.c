@@ -21,6 +21,7 @@
 
 #include "gadgets.h"
 #include "file_pe.h"
+#include "file_elf.h"
 
 int main (int argc, char *argv[]) {
     size_t idxGadget;
@@ -40,7 +41,7 @@ int main (int argc, char *argv[]) {
     if (!fp)
         return -2;
 
-    if (PeCheck(fp))
+    if (ElfCheck(fp) || PeCheck(fp))
         gadgets = ropit_gadgets_find_in_executable(argv[1]);
     else
         gadgets = ropit_gadgets_find_in_file(argv[1]);

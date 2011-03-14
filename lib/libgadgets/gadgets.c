@@ -25,8 +25,10 @@
 
 #include <libdis.h>
 #include <pcre.h>
+#include <libelf.h>
 
-#include <file_pe.h>
+#include "file_elf.h"
+#include "file_pe.h"
 
 #define BUF_SIZE    1024
 #define LINE_SIZE   1024
@@ -486,8 +488,61 @@ ropit_gadgets_find_cleanup:
     return gadget;
 }
 
-// find gadgets in executable file
-struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
+// find gadgets in PE file
+struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
+    ELF_FILE *elf;
+    struct ropit_gadget_t *gadgets;
+    Elf32_Shdr *sectionHeadersTable;
+    Elf32_Ehdr *elfHeader = NULL;
+    size_t idxSection, idxGadget;
+    //
+    size_t nGadgets, nInstructions;
+
+    elf = ElfLoad(filename);
+    if (!elf) {
+        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed loading PE\n");
+        return NULL;
+    }
+
+    elfHeader = ElfGetHeader(elf);
+    if (!elfHeader) {
+        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting elfHeaders\n");
+        return NULL;
+    }
+
+    sectionHeadersTable = ElfGetSectionHeadersTable(elf);
+    if (!sectionHeadersTable) {
+        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Section Headers Table\n");
+        return NULL;
+    }
+
+    for (idxSection = 0, nGadgets = 0, nInstructions = 0; idxSection < elfHeader->e_shnum; idxSection++) {
+        if (sectionHeadersTable[idxSection].sh_flags & SHF_EXECINSTR
+                && !(sectionHeadersTable[idxSection].sh_type & SHT_NOBITS)) {
+            gadgets = ropit_gadgets_find(elf->fmap->map + sectionHeadersTable[idxSection].sh_offset,
+                    sectionHeadersTable[idxSection].sh_size,
+                    sectionHeadersTable[idxSection].sh_addr);
+            if (!gadgets)
+                continue;
+
+            nGadgets += gadgets->gadgets->used;
+            nInstructions += gadgets->nInstructions;
+
+            ropit_gadget_destroy(&gadgets);
+        }
+    }
+
+    printf("\n== SUMMARY ==\n");
+    printf("nInstructions: %lu\n", nInstructions);
+    printf("nGadgets: %lu\n", nGadgets);
+
+    PeUnload(&elf);
+
+    return NULL;
+}
+
+// find gadgets in PE file
+struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename) {
     PE_FILE *pefile;
     struct ropit_gadget_t *gadgets;
     IMAGE_SECTION_HEADER *sectionHeadersTable;
@@ -498,18 +553,18 @@ struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
 
     pefile = PeLoad(filename);
     if (!pefile) {
-        fprintf(stderr, "ropit_gadgets_find_in_executable(): Failed loading PE\n");
+        fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed loading PE\n");
         return NULL;
     }
 
     ntHeader = PeGetNtHeader(pefile);
     if (!ntHeader) {
-        fprintf(stderr, "ropit_gadgets_find_in_executable(): Failed getting NtHeaders\n");
+        fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed getting NtHeaders\n");
         return NULL;
     }
     sectionHeadersTable = PeGetSectionHeaderTable(pefile);
     if (!sectionHeadersTable) {
-        fprintf(stderr, "ropit_gadgets_find_in_executable(): Failed getting Section Headers Table\n");
+        fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed getting Section Headers Table\n");
         return NULL;
     }
 
@@ -533,6 +588,25 @@ struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
     printf("nGadgets: %lu\n", nGadgets);
 
     PeUnload(&pefile);
+
+    return NULL;
+}
+
+// find gadgets in executable file
+struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
+    FILE *fp;
+    struct ropit_gadget_t *gadgets;
+
+    fp = fopen(filename, "r");
+    if (!fp)
+        return NULL;
+
+    if (ElfCheck(fp))
+        gadgets = ropit_gadgets_find_in_elf(filename);
+    else if (PeCheck(fp))
+        gadgets = ropit_gadgets_find_in_pe(filename);
+
+    fclose(fp);
 
     return NULL;
 }
@@ -568,7 +642,6 @@ ropit_gadgets_find_in_file_cleanup:
 
     return NULL;
 }
-
 
 char* ropit_listing_disasm (unsigned char *bytes, size_t len) {
     int pos = 0;             /* current position in buffer */
