@@ -20,15 +20,16 @@
 #include <stdlib.h>
 
 #include "gadgets.h"
+#include "file_pe.h"
 
 int main (int argc, char *argv[]) {
     size_t idxGadget;
     FILE *fp;
     struct ropit_gadget_t *gadgets;
 
-    printf("==========================\n");
-    printf("== ROPit v0.1 beta by m_101 ==\n");
-    printf("==========================\n");
+    printf("=================================\n");
+    printf("== ROPit v0.1 alpha 2 by m_101 ==\n");
+    printf("=================================\n");
     if (argc < 2) {
         printf("Usage: %s file\n\n", argv[0]);
         return -1;
@@ -45,9 +46,6 @@ int main (int argc, char *argv[]) {
         gadgets = ropit_gadgets_find_in_file(argv[1]);
     if (!gadgets)
         return -3;
-
-    for (idxGadget = 0; idxGadget < gadgets->nrepr; idxGadget++)
-        printf("%s\n", gadgets->repr[idxGadget].str);
 
     // clean up
 ropit_cleanup:

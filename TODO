@@ -1,5 +1,14 @@
    TO DO :
- - ELF format support
+
+* v0.1:
+ - ELF et Mach-O executable format support
+ - check_pointers_charset(): ASCII, NUM&CHARS, etc
+ - check_pointer_characteristics(): ASLR, SAFESEH, etc
  - A LOOOTS of optimisation, this tool is too memory hungry for daily usage
- - Automatic ROPstack generation in order to exploits vulnerabilities faster, better and sexier
  - More tests on 32bits and 64bits archs
+ - windows and linux compatibility
+
+* unknown future:
+ - Automatic ROPstack generation in order to exploits vulnerabilities faster, better and sexier
+ - ROPstack analysis
+ - ARM architecture support
