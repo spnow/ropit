@@ -1,6 +1,6 @@
 /*
     ROPit - Gadget generator tool
-    Copyright (C) 2010  m_101
+    Copyright (C) 2011  m_101
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -38,6 +38,8 @@ struct ropit_offsets_t* ropit_offsets_new(size_t nElt) {
     if (!match)
         return NULL;
     match->offsets = calloc(nElt, sizeof(*(match->offsets)));
+    if (!match->offsets)
+        return NULL;
     match->capacity = nElt;
     match->used = 0;
 
@@ -206,9 +208,11 @@ struct ropit_offsets_t* ropit_instructions_find(unsigned char *bytes, size_t len
     }
 
     // allocate
-    valid = ropit_offsets_new(len * 1024);
-    if (!valid)
+    valid = ropit_offsets_new(len / 8);
+    if (!valid) {
+        fprintf(stderr, "ropit_instructions_find(): failed alloc\n");
         return NULL;
+    }
 
     // init disasm
     x86_init(opt_none, NULL, NULL);
@@ -255,11 +259,20 @@ struct ropit_offsets_t* ropit_instructions_find(unsigned char *bytes, size_t len
     }
     x86_cleanup();
 
-    ropit_offsets_destroy(&rets);
+    valid->used = idxValid;
+
+    // we remove out rets in instructions list
+    for (idxValid = 0; idxValid < valid->used; idxValid++) {
+        if (ropit_offsets_exist(rets, valid->offsets[idxValid])) {
+            valid->offsets[idxValid] = -1;
+            valid->used--;
+        }
+    }
 
     qsort (valid->offsets, idxValid, sizeof(int), compare_ints);
+    valid = ropit_offsets_realloc(valid, valid->used);
 
-    valid->used = idxValid;
+    ropit_offsets_destroy(&rets);
 
     return valid;
 }
@@ -271,25 +284,19 @@ struct ropit_gadget_t* ropit_gadget_new(size_t n) {
     if (!gadget)
         return NULL;
 
-    gadget->repr = calloc(n, sizeof(*(gadget->repr)));
-    gadget->nrepr = n;
-    gadget->offsets = calloc(n, sizeof(*(gadget->offsets)));
+    gadget->gadgets = ropit_offsets_new(n);
 
     return gadget;
 }
 
-    struct ropit_gadget_t* ropit_gadget_realloc(struct ropit_gadget_t *gadget, size_t n) {
-        if (!gadget)
-            return NULL;
+struct ropit_gadget_t* ropit_gadget_realloc(struct ropit_gadget_t *gadget, size_t n) {
+    if (!gadget)
+        return NULL;
 
-        printf("n: %lu\n", n);
+    gadget->gadgets = ropit_offsets_realloc(gadget->gadgets, n);
 
-        gadget->repr = realloc(gadget->repr, n * sizeof(*(gadget->repr)));
-        gadget->nrepr = n;
-        gadget->offsets = realloc(gadget->offsets, n * sizeof(*(gadget->offsets)));
-
-        return gadget;
-    }
+    return gadget;
+}
 
 void ropit_gadget_destroy(struct ropit_gadget_t **gadget) {
     size_t idxRepr;
@@ -298,18 +305,8 @@ void ropit_gadget_destroy(struct ropit_gadget_t **gadget) {
         return;
     if (!*gadget)
         return;
-    if ((*gadget)->repr) {
-        for (idxRepr = 0; idxRepr < (*gadget)->nrepr; idxRepr++) {
-            if ((*gadget)->repr[idxRepr].malloced) {
-                free((*gadget)->repr[idxRepr].str);
-                (*gadget)->repr[idxRepr].str = NULL;
-            }
-        }
-    }
 
-    free((*gadget)->repr);
-    free((*gadget)->offsets);
-    ropit_offsets_destroy(&((*gadget)->instructions));
+    ropit_offsets_destroy(&((*gadget)->gadgets));
     free(*gadget);
     *gadget = NULL;
 }
@@ -317,33 +314,13 @@ void ropit_gadget_destroy(struct ropit_gadget_t **gadget) {
 struct ropit_gadget_t* ropit_gadget_append (struct ropit_gadget_t *gadgets_list, struct ropit_gadget_t *gadgets) {
     struct ropit_gadget_t *wip;
 
-    printf("sizeof(string_t): %lu\n", sizeof(*(gadgets->repr)));
     //
     if (!gadgets_list || !gadgets)
         return NULL;
 
-    gadgets_list = ropit_gadget_realloc(gadgets_list, gadgets_list->nrepr + gadgets->nrepr);
+    gadgets_list = ropit_gadget_realloc(gadgets_list, gadgets_list->gadgets->used + gadgets->gadgets->used);
     if (!gadgets_list)
         return NULL;
-    memcpy(gadgets_list->offsets + gadgets_list->nrepr * sizeof(*(gadgets_list->offsets)),
-            gadgets->offsets,
-            gadgets->nrepr * sizeof(*(gadgets->offsets)));
-    memcpy(gadgets_list->repr + gadgets_list->nrepr * sizeof(*(gadgets_list->repr)),
-            gadgets->repr,
-            gadgets->nrepr * sizeof(*(gadgets->repr)));
-
-    gadgets_list->instructions = realloc(gadgets_list->instructions, (gadgets_list->instructions->used
-                + gadgets->instructions->used)
-            * sizeof(*(gadgets_list->instructions)));
-    if (!gadgets_list->instructions) {
-        ropit_gadget_destroy(&gadgets_list);
-        return NULL;
-    }
-
-    memcpy(gadgets_list->instructions + gadgets_list->instructions->used * sizeof(*(gadgets_list->instructions)),
-            gadgets->instructions,
-            gadgets->instructions->used * sizeof(*(gadgets->instructions)));
-    gadgets_list->instructions->used = gadgets_list->instructions->used + gadgets->instructions->used;
 
     return gadgets_list;
 }
@@ -402,10 +379,6 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
     int size;                /* size of instruction */
     int nInstructions;
     x86_insn_t insn;         /* instruction */
-    // store pointer to previous gadget
-    char *previousGadget = NULL;
-    // pointer to search gadget
-    char *searchGadget = NULL;
 
     instructions = ropit_instructions_find(bytes, len);
     if (!instructions)
@@ -421,25 +394,17 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
 
     // init disasm
     x86_init(opt_none, NULL, NULL);
-    // we remove out rets in gadget start list
-    for (idxInstruction = 0; idxInstruction < instructions->used; idxInstruction++) {
-        if (ropit_offsets_exist(rets, instructions->offsets[idxInstruction])) {
-            instructions->offsets[idxInstruction] = -1;
-            instructions->used--;
-        }
-    }
-    qsort (instructions->offsets, instructions->used, sizeof(int), compare_ints);
+
 
     // we search for gadgets
     idxInstruction = 0;
     for (idxRet = 0, idxGadget = 0; idxRet < rets->used; idxRet++) {
         while (idxInstruction < instructions->used) {
-            if (idxGadget >= gadget->nrepr) {
-                gadget = ropit_gadget_realloc(gadget, gadget->nrepr * 2);
-            }
+            if (idxGadget >= gadget->gadgets->capacity)
+                gadget = ropit_gadget_realloc(gadget, gadget->gadgets->capacity * 2);
             // gadget start position
             pos = instructions->offsets[idxInstruction];
-            gadget->offsets[idxGadget] = pos;
+            gadget->gadgets->offsets[idxGadget] = pos;
             char gadgetline[4096] = {0};
             nInstructions = 0;
             // get gadgets
@@ -453,10 +418,12 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
                     x86_oplist_free(&insn);
 
                     // filter out bad instructions
-                    if (ropit_instructions_check(line, linelen) == 0) {
-                        memset(line, 0, 4096);
+                    if (ropit_instructions_check(line, linelen) == 0)
                         break;
-                    }
+                    if (strcasestr(gadgetline, "ret"))
+                        break;
+                    if (nInstructions >= 8)
+                        break;
 #ifdef DEBUG
                     snprintf(gadgetline, 4096, "%s #%u %s", gadgetline, pos, line);
 #else
@@ -467,10 +434,6 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
                     pos += size;
                     nInstructions++;
                 }
-                if (strcasestr(gadgetline, "ret"))
-                    break;
-                if (nInstructions >= 8)
-                    break;
             } while (size);
 
             if (!strcasestr(gadgetline, "ret"))
@@ -478,29 +441,8 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
 
             // if gadget found
             if (strlen(gadgetline) && nInstructions) {
-                /*
-                for (idxOptim = 0; idxOptim < idxGadget; idxOptim++) {
-                    // memory optimization
-                    searchGadget = strcasestr(gadget->repr[idxOptim].str, gadgetline);
-                    if (searchGadget)
-                        break;
-                }
-                // memory optimization
-                if (searchGadget) {
-                    gadget->repr[idxGadget].str = searchGadget;
-                    gadget->repr[idxGadget].malloced = 0;
-                    }
-                    else {
-                    gadget->repr[idxGadget].str = strdup(gadgetline);
-                    gadget->repr[idxGadget].malloced = 1;
-                    }
-                //*/
-
-                printf("%p: %s\n", base + gadget->offsets[idxGadget], gadgetline);
-
-                // gadget->repr[idxGadget].len = strlen(gadgetline);
-                gadget->repr[idxGadget].malloced = 0;
-                // previousGadget = gadget->repr[idxGadget].str;
+                printf("%p: %s\n", base + gadget->gadgets->offsets[idxGadget], gadgetline);
+                gadget->gadgets->used++;
                 idxGadget++;
             }
 
@@ -509,19 +451,20 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
     }
     x86_cleanup();
 
+    gadget->nInstructions = instructions->used;
     ropit_offsets_destroy(&rets);
-    qsort (instructions->offsets, idxGadget, sizeof(int), compare_ints);
+    ropit_offsets_destroy(&instructions);
 
-    gadget->instructions = instructions;
-    gadget->nrepr = idxGadget;
+    return gadget;
 
+ropit_gadgets_find_cleanup:
     return gadget;
 }
 
 // find gadgets in executable file
 struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
     PE_FILE *pefile;
-    struct ropit_gadget_t *gadgets, *gadget_list;
+    struct ropit_gadget_t *gadgets;
     IMAGE_SECTION_HEADER *sectionHeadersTable;
     IMAGE_NT_HEADERS *ntHeader = NULL;
     size_t idxSection, idxGadget;
@@ -545,9 +488,7 @@ struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
         return NULL;
     }
 
-    gadget_list = ropit_gadget_new(1024);
-
-    for (idxSection = 0, nGadgets = 0; idxSection < ntHeader->FileHeader.NumberOfSections; idxSection++) {
+    for (idxSection = 0, nGadgets = 0, nInstructions = 0; idxSection < ntHeader->FileHeader.NumberOfSections; idxSection++) {
         if (sectionHeadersTable[idxSection].Characteristics & IMAGE_SCN_MEM_EXECUTE) {
             gadgets = ropit_gadgets_find(pefile->fmap->map + sectionHeadersTable[idxSection].PointerToRawData,
                     sectionHeadersTable[idxSection].SizeOfRawData,
@@ -555,18 +496,9 @@ struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
             if (!gadgets)
                 continue;
 
-            nGadgets += gadgets->nrepr;
-            nInstructions += gadgets->instructions->used;
+            nGadgets += gadgets->gadgets->used;
+            nInstructions += gadgets->nInstructions;
 
-            // gadget_list = ropit_gadget_append(gadget_list, gadgets);
-            /*
-               for (idxGadget = 0; idxGadget < gadgets->nrepr; idxGadget++) {
-               printf("%p: %s\n", ntHeader->OptionalHeader.ImageBase
-               + sectionHeadersTable[idxSection].VirtualAddress
-               + gadgets->offsets[idxGadget],
-               gadgets->repr[idxGadget].str);
-               }
-            //*/
             ropit_gadget_destroy(&gadgets);
         }
     }
@@ -576,7 +508,6 @@ struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
     printf("nGadgets: %lu\n", nGadgets);
 
     PeUnload(&pefile);
-    ropit_gadget_destroy(&gadget_list);
 
     return NULL;
 }

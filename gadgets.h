@@ -1,6 +1,6 @@
 /*
     ROPit - Gadget generator tool
-    Copyright (C) 2010  m_101
+    Copyright (C) 2011  m_101
 
     This program is free software: you can redistribute it and/or modify
     it under the terms of the GNU Lesser General Public License as published by
@@ -53,10 +53,10 @@ struct string_t {
 };
 
 struct ropit_gadget_t {
-    struct string_t *repr;
-    size_t nrepr;
-    size_t *offsets;
-    struct ropit_offsets_t *instructions;
+    // gadgets
+    struct ropit_offsets_t *gadgets;
+    // instructions
+    size_t nInstructions;
 };
 
 struct ropit_gadget_t* ropit_gadget_new(size_t n);
