@@ -18,6 +18,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include <string.h>
 #include <ctype.h>
@@ -31,6 +32,7 @@
 #define LINE_SIZE   1024
 
 #include "gadgets.h"
+#include "gadgets_internal.h"
 
 struct ropit_offsets_t* ropit_offsets_new(size_t nElt) {
     struct ropit_offsets_t *match = calloc(1, sizeof(*match));
@@ -323,6 +325,29 @@ struct ropit_gadget_t* ropit_gadget_append (struct ropit_gadget_t *gadgets_list,
         return NULL;
 
     return gadgets_list;
+}
+
+int ropit_pointers_check_charset(uint64_t pointer,
+                                 char *charset, size_t szCharset) {
+    size_t idxCharset;
+    unsigned char p[8] = {0};
+
+    p[0] = pointer & 0xff;
+    p[1] = (pointer >> 8) & 0xff;
+    p[2] = (pointer >> 16) & 0xff;
+    p[3] = (pointer >> 24) & 0xff;
+    p[4] = (pointer >> 32) & 0xff;
+    p[5] = (pointer >> 40) & 0xff;
+    p[6] = (pointer >> 48) & 0xff;
+    p[7] = (pointer >> 56) & 0xff;
+    
+    for (idxCharset = 0; idxCharset < szCharset; idxCharset++) {
+    }
+
+    return 0;
+}
+
+int ropit_pointers_check_pointer_characteristics() {
 }
 
 // check if inst is good
