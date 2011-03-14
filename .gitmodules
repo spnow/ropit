@@ -1,0 +1,6 @@
+[submodule "lib/libgadgets"]
+	path = lib/libgadgets
+	url = git@github.com:m101/libgadgets.git
+[submodule "lib/libbparse"]
+	path = lib/libbparse
+	url = git@github.com:m101/libbparse.git
