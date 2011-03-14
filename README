@@ -1,0 +1,18 @@
+== ROPit v0.1 alpha
+
+This project is aimed to have a nice tool for ROPping :).
+
+For now it only support PE files and need more optimisations.
+
+It is still in it's early development phase, or more commonly known as alpha stage.
+
+The gadget library isn't stable at all so no usage should be made of it.
+The stabilization of the library will come further in the development stage.
+
+I'm releasing the source so more people can contribute to it and use it.
+
+Hope you enjoy it,
+
+Don't hesitate to mail me if you have any comment on it.
+
+m_101

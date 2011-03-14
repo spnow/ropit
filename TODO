@@ -1,0 +1,5 @@
+   TO DO :
+ - ELF format support
+ - A LOOOTS of optimisation, this tool is too memory hungry for daily usage
+ - Automatic ROPstack generation in order to exploits vulnerabilities faster, better and sexier
+ - More tests on 32bits and 64bits archs
