@@ -45,8 +45,6 @@ int main (int argc, char *argv[]) {
         gadgets = ropit_gadgets_find_in_executable(argv[1]);
     else
         gadgets = ropit_gadgets_find_in_file(argv[1]);
-    if (!gadgets)
-        return -3;
 
     // clean up
 ropit_cleanup:
