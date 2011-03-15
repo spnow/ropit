@@ -490,45 +490,75 @@ ropit_gadgets_find_cleanup:
 
 // find gadgets in PE file
 struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
-    ELF_FILE *elf;
+    ELF_FILE *elffile;
     struct ropit_gadget_t *gadgets;
-    Elf32_Shdr *sectionHeadersTable;
     Elf32_Ehdr *elfHeader = NULL;
-    size_t idxSection, idxGadget;
+    Elf32_Shdr *sectionHeadersTable;
+    Elf32_Phdr *programHeadersTable;
+    size_t idxSection, idxProgramSegment, idxGadget;
     //
     size_t nGadgets, nInstructions;
 
-    elf = ElfLoad(filename);
-    if (!elf) {
-        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed loading PE\n");
+    elffile = ElfLoad(filename);
+    if (!elffile) {
+        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed loading ELF\n");
         return NULL;
     }
 
-    elfHeader = ElfGetHeader(elf);
+    if (ElfCheckArchitecture (elffile) == 0) {
+        fprintf(stderr, "ropit_gadgets_find_in_elf(): Architecture not supported\n");
+        ElfUnload(&elffile);
+        return NULL;
+    }
+
+    elfHeader = ElfGetHeader(elffile);
     if (!elfHeader) {
         fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting elfHeaders\n");
         return NULL;
     }
 
-    sectionHeadersTable = ElfGetSectionHeadersTable(elf);
+    // sections parsing
+    sectionHeadersTable = ElfGetSectionHeadersTable(elffile);
     if (!sectionHeadersTable) {
         fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Section Headers Table\n");
-        return NULL;
+    }
+    else {
+        for (idxSection = 0, nGadgets = 0, nInstructions = 0; idxSection < elfHeader->e_shnum; idxSection++) {
+            if (sectionHeadersTable[idxSection].sh_flags & SHF_EXECINSTR
+                    && !(sectionHeadersTable[idxSection].sh_type & SHT_NOBITS)) {
+                gadgets = ropit_gadgets_find(elffile->fmap->map + sectionHeadersTable[idxSection].sh_offset,
+                        sectionHeadersTable[idxSection].sh_size,
+                        sectionHeadersTable[idxSection].sh_addr);
+                if (!gadgets)
+                    continue;
+
+                nGadgets += gadgets->gadgets->used;
+                nInstructions += gadgets->nInstructions;
+
+                ropit_gadget_destroy(&gadgets);
+            }
+        }
     }
 
-    for (idxSection = 0, nGadgets = 0, nInstructions = 0; idxSection < elfHeader->e_shnum; idxSection++) {
-        if (sectionHeadersTable[idxSection].sh_flags & SHF_EXECINSTR
-                && !(sectionHeadersTable[idxSection].sh_type & SHT_NOBITS)) {
-            gadgets = ropit_gadgets_find(elf->fmap->map + sectionHeadersTable[idxSection].sh_offset,
-                    sectionHeadersTable[idxSection].sh_size,
-                    sectionHeadersTable[idxSection].sh_addr);
-            if (!gadgets)
-                continue;
+    // program segments parsing
+    programHeadersTable = ElfGetProgramHeadersTable (elffile);
+    if (!programHeadersTable) {
+        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Program Headers Table\n");
+    }
+    else {
+        for (idxProgramSegment = 0, nGadgets = 0, nInstructions = 0; idxProgramSegment < elfHeader->e_phnum; idxProgramSegment++) {
+            if (programHeadersTable[idxProgramSegment].p_flags & PF_X) {
+                gadgets = ropit_gadgets_find(elffile->fmap->map + programHeadersTable[idxProgramSegment].p_offset,
+                        programHeadersTable[idxProgramSegment].p_filesz,
+                        programHeadersTable[idxProgramSegment].p_paddr);
+                if (!gadgets)
+                    continue;
 
-            nGadgets += gadgets->gadgets->used;
-            nInstructions += gadgets->nInstructions;
+                nGadgets += gadgets->gadgets->used;
+                nInstructions += gadgets->nInstructions;
 
-            ropit_gadget_destroy(&gadgets);
+                ropit_gadget_destroy(&gadgets);
+            }
         }
     }
 
@@ -536,7 +566,7 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
     printf("nInstructions: %lu\n", nInstructions);
     printf("nGadgets: %lu\n", nGadgets);
 
-    PeUnload(&elf);
+    ElfUnload(&elffile);
 
     return NULL;
 }
@@ -554,6 +584,12 @@ struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename) {
     pefile = PeLoad(filename);
     if (!pefile) {
         fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed loading PE\n");
+        return NULL;
+    }
+
+    if (PeCheckArchitecture (pefile) == 0) {
+        fprintf(stderr, "ropit_gadgets_find_in_pe(): Architecture not supported\n");
+        PeUnload(&pefile);
         return NULL;
     }
 
