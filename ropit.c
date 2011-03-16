@@ -38,8 +38,10 @@ int main (int argc, char *argv[]) {
     printf("\n");
 
     fp = fopen(argv[1], "r");
-    if (!fp)
+    if (!fp) {
+        fprintf(stderr, "Failed opening file '%s' (r)\n", argv[1]);
         return -2;
+    }
 
     if (ElfCheck(fp) || PeCheck(fp))
         gadgets = ropit_gadgets_find_in_executable(argv[1]);
