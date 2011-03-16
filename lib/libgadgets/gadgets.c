@@ -515,30 +515,7 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
         return NULL;
     }
 
-    // sections parsing
-    sectionHeadersTable = ElfGetSectionHeadersTable(elffile);
-    if (!sectionHeadersTable) {
-        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Section Headers Table\n");
-    }
-    else {
-        for (idxSection = 0, nGadgets = 0, nInstructions = 0; idxSection < elfHeader->e_shnum; idxSection++) {
-            if (sectionHeadersTable[idxSection].sh_flags & SHF_EXECINSTR
-                    && !(sectionHeadersTable[idxSection].sh_type & SHT_NOBITS)) {
-                gadgets = ropit_gadgets_find(elffile->fmap->map + sectionHeadersTable[idxSection].sh_offset,
-                        sectionHeadersTable[idxSection].sh_size,
-                        sectionHeadersTable[idxSection].sh_addr);
-                if (!gadgets)
-                    continue;
-
-                nGadgets += gadgets->gadgets->used;
-                nInstructions += gadgets->nInstructions;
-
-                ropit_gadget_destroy(&gadgets);
-            }
-        }
-    }
-
-    // program segments parsing
+    // program segments parsing (sections are part of program segments)
     programHeadersTable = ElfGetProgramHeadersTable (elffile);
     if (!programHeadersTable) {
         fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Program Headers Table\n");
