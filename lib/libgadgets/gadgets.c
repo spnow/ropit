@@ -25,7 +25,6 @@
 
 #include <libdis.h>
 #include <pcre.h>
-#include <libelf.h>
 
 #include "file_elf.h"
 #include "file_pe.h"
@@ -432,12 +431,13 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
             // gadget start position
             pos = instructions->offsets[idxInstruction];
             gadget->gadgets->offsets[idxGadget] = pos;
-            char gadgetline[4096] = {0};
+            char gadgetline[2048] = {0};
+            int gadgetlen = 2048;
             nInstructions = 0;
             // get gadgets
             do {
-                char line[4096] = {0};
-                int linelen = 4096;
+                char line[256] = {0};
+                int linelen = 256;
                 /* disassemble address */
                 size = x86_disasm(bytes, len, 0, pos, &insn);
                 if (size) {
@@ -452,11 +452,11 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
                     if (nInstructions >= 8)
                         break;
 #ifdef DEBUG
-                    snprintf(gadgetline, 4096, "%s #%u %s", gadgetline, pos, line);
+                    snprintf(gadgetline, gadgetlen, "%s #%u %s", gadgetline, pos, line);
 #else
-                    strncat(gadgetline, line, 4096 - strlen(gadgetline));
-                    strncat(gadgetline, " # ", 4096 - strlen(gadgetline));
-                    gadgetline[4095] = '\0';
+                    strncat(gadgetline, line, gadgetlen - strlen(gadgetline));
+                    strncat(gadgetline, " # ", gadgetlen - strlen(gadgetline));
+                    gadgetline[2047] = '\0';
 #endif
                     pos += size;
                     nInstructions++;
@@ -464,7 +464,7 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
             } while (size);
 
             if (!strcasestr(gadgetline, "ret"))
-                memset(gadgetline, 0, 4096);
+                memset(gadgetline, 0, gadgetlen);
 
             // if gadget found
             if (strlen(gadgetline) && nInstructions) {
