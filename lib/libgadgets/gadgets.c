@@ -28,6 +28,7 @@
 
 #include "file_elf.h"
 #include "file_pe.h"
+#include "string_extended.h"
 
 #define BUF_SIZE    1024
 #define LINE_SIZE   1024
@@ -468,6 +469,7 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
 
             // if gadget found
             if (strlen(gadgetline) && nInstructions) {
+                str_tabs2spaces(gadgetline, gadgetlen);
                 printf("%p: %s\n", (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
                 gadget->gadgets->used++;
                 idxGadget++;

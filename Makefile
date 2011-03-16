@@ -3,7 +3,7 @@ LIBDIR = ./lib
 LDLIBS = $(LIBDIR)/libbparse/src/libbparse.la
 INCDIR = ./lib
 HEADERS = -I$(INCDIR)/libbparse/src -I$(INCDIR)/libgadgets
-OBJS = $(LIBDIR)/libgadgets/gadgets.o ropit.o
+OBJS = $(LIBDIR)/libgadgets/gadgets.o $(LIBDIR)/libgadgets/string_extended.o ropit.o
 
 CC	=	gcc
 CFLAGS	=	-g -Wall
