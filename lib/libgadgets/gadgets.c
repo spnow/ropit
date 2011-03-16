@@ -399,20 +399,20 @@ int ropit_instructions_check (char *inst, size_t len) {
 // find gadgets offsets
 // construct gadgets from instructions finder
 struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint64_t base) {
-    struct ropit_offsets_t *instructions = NULL, *rets = NULL;
+    struct ropit_offsets_t *instructions = NULL;
     struct ropit_gadget_t *gadget = NULL;
-    size_t idxGadget, idxInstruction, idxRet, idxOptim;
+    size_t idxGadget, idxInstruction;
     int pos = 0;             /* current position in buffer */
     int size;                /* size of instruction */
     int nInstructions;
     x86_insn_t insn;         /* instruction */
+    // instruction str buffer
+    char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
+    int disasLength;
+    char gadgetline[GADGET_SIZE_MAX] =  {0};
 
     instructions = ropit_instructions_find(bytes, len);
     if (!instructions)
-        return NULL;
-
-    rets = ropit_opcodes_find_ret(bytes, len);
-    if (!rets)
         return NULL;
 
     gadget = ropit_gadget_new(1024);
@@ -422,66 +422,61 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
     // init disasm
     x86_init(opt_none, NULL, NULL);
 
-
     // we search for gadgets
     idxInstruction = 0;
-    for (idxRet = 0, idxGadget = 0; idxRet < rets->used; idxRet++) {
-        while (idxInstruction < instructions->used) {
-            if (idxGadget >= gadget->gadgets->capacity)
-                gadget = ropit_gadget_realloc(gadget, gadget->gadgets->capacity * 2);
-            // gadget start position
-            pos = instructions->offsets[idxInstruction];
-            gadget->gadgets->offsets[idxGadget] = pos;
-            char gadgetline[2048] = {0};
-            int gadgetlen = 2048;
-            nInstructions = 0;
-            // get gadgets
-            do {
-                char line[256] = {0};
-                int linelen = 256;
-                /* disassemble address */
-                size = x86_disasm(bytes, len, 0, pos, &insn);
-                if (size) {
-                    x86_format_insn(&insn, line, linelen, intel_syntax);
-                    x86_oplist_free(&insn);
+    idxGadget = 0;
+    while (idxInstruction < instructions->used) {
+        if (idxGadget >= gadget->gadgets->capacity)
+            gadget = ropit_gadget_realloc(gadget, gadget->gadgets->capacity * 2);
+        // gadget start position
+        pos = instructions->offsets[idxInstruction];
+        gadget->gadgets->offsets[idxGadget] = pos;
+        nInstructions = 0;
+        // get gadgets
+        do {
+            /* disassemble address */
+            size = x86_disasm(bytes, len, 0, pos, &insn);
+            if (size) {
+                disasLength = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
+                x86_oplist_free(&insn);
 
-                    // filter out bad instructions
-                    if (ropit_instructions_check(line, linelen) == 0)
-                        break;
-                    if (strcasestr(gadgetline, "ret"))
-                        break;
-                    if (nInstructions >= 8)
-                        break;
-#ifdef DEBUG
-                    snprintf(gadgetline, gadgetlen, "%s #%u %s", gadgetline, pos, line);
-#else
-                    strncat(gadgetline, line, gadgetlen - strlen(gadgetline));
-                    strncat(gadgetline, " # ", gadgetlen - strlen(gadgetline));
-                    gadgetline[2047] = '\0';
-#endif
-                    pos += size;
-                    nInstructions++;
-                }
-            } while (size);
+                // filter out bad instructions
+                if (ropit_instructions_check(disassembled, DISASSEMBLED_SIZE_MAX) == 0)
+                    break;
+                if (strcasestr(gadgetline, "ret"))
+                    break;
+                if (nInstructions >= 8)
+                    break;
 
-            if (!strcasestr(gadgetline, "ret"))
-                memset(gadgetline, 0, gadgetlen);
+                // construct gadget
+                strncat(gadgetline, disassembled, GADGET_SIZE_MAX - strlen(gadgetline));
+                strncat(gadgetline, " # ", GADGET_SIZE_MAX - strlen(gadgetline));
+                gadgetline[GADGET_SIZE_MAX-1] = '\0';
 
-            // if gadget found
-            if (strlen(gadgetline) && nInstructions) {
-                str_tabs2spaces(gadgetline, gadgetlen);
-                printf("%p: %s\n", (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
-                gadget->gadgets->used++;
-                idxGadget++;
+                // go forward
+                pos += size;
+                nInstructions++;
             }
+        } while (size);
 
-            idxInstruction++;
+        if (!strcasestr(gadgetline, "ret"))
+            memset(gadgetline, 0, GADGET_SIZE_MAX);
+
+        // if gadget found
+        if (strlen(gadgetline) && nInstructions) {
+            str_tabs2spaces(gadgetline, GADGET_SIZE_MAX);
+            printf("%p: %s\n", (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
+            // for strncat() upper
+            *gadgetline = '\0';
+            gadget->gadgets->used++;
+            idxGadget++;
         }
+
+        idxInstruction++;
     }
     x86_cleanup();
 
     gadget->nInstructions = instructions->used;
-    ropit_offsets_destroy(&rets);
     ropit_offsets_destroy(&instructions);
 
     return gadget;

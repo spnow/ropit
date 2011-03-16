@@ -19,6 +19,9 @@
 #ifndef _GADGETS_INTERNAL_H_
 #define _GADGETS_INTERNAL_H
 
+#define DISASSEMBLED_SIZE_MAX   256
+#define GADGET_SIZE_MAX         2048
+
 struct ropit_offsets_t {
     int *offsets;
     size_t capacity;
