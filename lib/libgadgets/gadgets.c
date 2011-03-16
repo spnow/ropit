@@ -22,6 +22,7 @@
 
 #include <string.h>
 #include <ctype.h>
+#include <elf.h>
 
 #include <libdis.h>
 #include <pcre.h>
