@@ -468,7 +468,7 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
 
             // if gadget found
             if (strlen(gadgetline) && nInstructions) {
-                printf("%p: %s\n", base + gadget->gadgets->offsets[idxGadget], gadgetline);
+                printf("%p: %s\n", (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
                 gadget->gadgets->used++;
                 idxGadget++;
             }
