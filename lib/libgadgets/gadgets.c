@@ -133,12 +133,6 @@ struct ropit_offsets_t* ropit_opcodes_find_ret(unsigned char *bytes, size_t len)
     return rets;
 }
 
-// search jumps
-// check address
-int check_pointer(void *address) {
-    return 0;
-}
-
 //
 struct ropit_offsets_t* ropit_filter_regexp(unsigned char *bytes, size_t len, char *expr) {
     pcre *pattern = NULL;
@@ -389,7 +383,7 @@ int ropit_instructions_check (char *inst, size_t len) {
 
     idxGood = 0;
     while (good[idxGood] != NULL) {
-        if (strcasestr(inst, good[idxGood]))
+        if (strstr(inst, good[idxGood]))
             return 1;
         idxGood++;
     }
@@ -444,7 +438,7 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
                 // filter out bad instructions
                 if (ropit_instructions_check(disassembled, DISASSEMBLED_SIZE_MAX) == 0)
                     break;
-                if (strcasestr(gadgetline, "ret"))
+                if (strstr(gadgetline, "ret"))
                     break;
                 if (nInstructions >= 8)
                     break;
@@ -460,7 +454,7 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
             }
         } while (size);
 
-        if (!strcasestr(gadgetline, "ret"))
+        if (!strstr(gadgetline, "ret"))
             memset(gadgetline, 0, GADGET_SIZE_MAX);
 
         // if gadget found
