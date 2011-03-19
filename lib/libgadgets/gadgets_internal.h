@@ -22,53 +22,27 @@
 #define DISASSEMBLED_SIZE_MAX   256
 #define GADGET_SIZE_MAX         2048
 
-struct ropit_offsets_t {
-    int *offsets;
-    size_t capacity;
-    size_t used;
-};
+#include <stdlib.h>
 
-struct ropit_offsets_t* ropit_offsets_new(size_t size);
-struct ropit_offsets_t* ropit_offsets_realloc(struct ropit_offsets_t *ropmatch, size_t size);
-void ropit_offsets_destroy(struct ropit_offsets_t **match);
-size_t ropit_offsets_exist(struct ropit_offsets_t *array, int offset);
 int compare_ints (const void * a, const void * b);
 // search some opcodes
 struct ropit_offsets_t* ropit_opcodes_find(unsigned char *bytes, size_t n,
         unsigned char *opcodes, size_t m, size_t szOpcode);
 // search rets
 struct ropit_offsets_t* ropit_opcodes_find_ret(unsigned char *bytes, size_t len);
-//
+
+// filter by regexp
 struct ropit_offsets_t* ropit_filter_regexp(unsigned char *bytes, size_t len, char *expr);
+// filter pop/pop/ret
 struct ropit_offsets_t* ropit_filter_ppr(unsigned char *bytes, size_t len);
+
 // find valid instructions offsets before ret
 struct ropit_offsets_t* ropit_instructions_find(unsigned char *bytes, size_t len);
 
-struct string_t {
-    char *str;
-    size_t len;
-    // boolean for malloc() to avoid error while freeing
-    int malloced;
-};
-
-struct ropit_gadget_t {
-    // gadgets
-    struct ropit_offsets_t *gadgets;
-    // instructions
-    size_t nInstructions;
-};
-
-struct ropit_gadget_t* ropit_gadget_new(size_t n);
-struct ropit_gadget_t* ropit_gadget_realloc(struct ropit_gadget_t *gadget, size_t n);
-void ropit_gadget_destroy(struct ropit_gadget_t **gadget);
-struct ropit_gadget_t* ropit_gadget_append (struct ropit_gadget_t *gadgets_list, struct ropit_gadget_t *gadgets);
 // find gadgets offsets
 // construct gadgets from instructions finder
 struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint64_t base);
-// find gadgets in executable file
-struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename);
-// find gadgets in file
-struct ropit_gadget_t* ropit_gadgets_find_in_file(char *filename);
+
 char* ropit_listing_disasm (unsigned char *bytes, size_t len);
 char* ropit_instructions_show (unsigned char *bytes, size_t len);
 

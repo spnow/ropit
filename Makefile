@@ -1,16 +1,16 @@
 TARGET = ropit
 LIBDIR = ./lib
-LDLIBS = $(LIBDIR)/libbparse/src/libbparse.la
+LDLIBS = $(LIBDIR)/libbparse/src/libbparse.la $(LIBDIR)/libgadgets/libgadgets.la
 INCDIR = ./lib
 HEADERS = -I$(INCDIR)/libbparse/src -I$(INCDIR)/libgadgets
-OBJS = $(LIBDIR)/libgadgets/gadgets.o $(LIBDIR)/libgadgets/string_extended.o ropit.o
+OBJS = ropit.o ropit_options.o
 
 CC	=	gcc
 CFLAGS	=	-g -Wall
 LDFLAGS =	-ldisasm -lpcre
 
 define compile_rule
-	libtool --mode=compile $(CC) $(CFLAGS) $(CPPFLAGS) -c $<
+	libtool --mode=compile $(CC) $(CFLAGS) $(HEADERS) $(CPPFLAGS) -c $<
 endef
 define link_rule
 	libtool --mode=link $(CC) $(LDFLAGS) $(HEADERS) -o $@ $^ $(LDLIBS)
@@ -18,14 +18,17 @@ endef
 
 all: $(TARGET)
 
-$(TARGET): libbparse
+$(TARGET): libbparse libgadgets $(OBJS)
 	libtool --mode=link $(CC) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LDLIBS) $(HEADERS)
 
 %.o: %.c
 	$(CC) -o $@ -c $< $(CFLAGS) $(LDFLAGS) $(HEADERS)
 
-libbparse: $(OBJS)
+libbparse:
 	cd $(LIBDIR)/libbparse/src && $(MAKE)
+
+libgadgets:	libbparse
+	cd $(LIBDIR)/libgadgets && $(MAKE)
 
 .PHONY: clean mrproper
 
@@ -35,3 +38,4 @@ clean:
 	rm -f $(OBJS) $(TARGET)
 	rm -f *.o
 	cd $(LIBDIR)/libbparse/src && $(MAKE) clean
+	cd $(LIBDIR)/libgadgets && $(MAKE) clean
