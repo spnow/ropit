@@ -23,6 +23,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+/* colors */
+#define COLOR_PURPLE    "\033[95m"
+#define COLOR_BLUE      "\033[94m"
+#define COLOR_GREEN     "\033[92m"
+#define COLOR_YELLOW    "\033[93m"
+#define COLOR_RED       "\033[91m"
+#define COLOR_WHITE     "\033[0m"
 
+// find gadgets in ELF file
+struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename);
+// find gadgets in PE file
+struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename);
+// find gadgets in executable file
+struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename);
+// find gadgets in file
+struct ropit_gadget_t* ropit_gadgets_find_in_file(char *filename);
 
 #endif /* _GADGETS_H_ */

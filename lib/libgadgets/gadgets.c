@@ -298,8 +298,6 @@ struct ropit_gadget_t* ropit_gadget_realloc(struct ropit_gadget_t *gadget, size_
 }
 
 void ropit_gadget_destroy(struct ropit_gadget_t **gadget) {
-    size_t idxRepr;
-
     if (!gadget)
         return;
     if (!*gadget)
@@ -444,7 +442,9 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
                     break;
 
                 // construct gadget
+                strncat(gadgetline, COLOR_RED, GADGET_SIZE_MAX - strlen(gadgetline));
                 strncat(gadgetline, disassembled, GADGET_SIZE_MAX - strlen(gadgetline));
+                strncat(gadgetline, COLOR_PURPLE, GADGET_SIZE_MAX - strlen(gadgetline));
                 strncat(gadgetline, " # ", GADGET_SIZE_MAX - strlen(gadgetline));
                 gadgetline[GADGET_SIZE_MAX-1] = '\0';
 
@@ -460,7 +460,7 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
         // if gadget found
         if (strlen(gadgetline) && nInstructions) {
             str_tabs2spaces(gadgetline, GADGET_SIZE_MAX);
-            printf("%p: %s\n", (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
+            printf("%s%p: %s\n", COLOR_GREEN, (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
             // for strncat() upper
             *gadgetline = '\0';
             gadget->gadgets->used++;
@@ -470,24 +470,21 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
         idxInstruction++;
     }
     x86_cleanup();
+    printf("%s\n", COLOR_WHITE);
 
     gadget->nInstructions = instructions->used;
     ropit_offsets_destroy(&instructions);
 
     return gadget;
-
-ropit_gadgets_find_cleanup:
-    return gadget;
 }
 
-// find gadgets in PE file
+// find gadgets in ELF file
 struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
     ELF_FILE *elffile;
     struct ropit_gadget_t *gadgets;
     Elf32_Ehdr *elfHeader = NULL;
-    Elf32_Shdr *sectionHeadersTable;
     Elf32_Phdr *programHeadersTable;
-    size_t idxSection, idxProgramSegment, idxGadget;
+    size_t idxProgramSegment;
     //
     size_t nGadgets, nInstructions;
 
@@ -532,8 +529,9 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
     }
 
     printf("\n== SUMMARY ==\n");
-    printf("nInstructions: %lu\n", nInstructions);
-    printf("nGadgets: %lu\n", nGadgets);
+    printf("nInstructions: %s%lu\n", COLOR_YELLOW, nInstructions);
+    printf("nGadgets: %s%lu\n", COLOR_YELLOW, nGadgets);
+    printf("%s\n", COLOR_WHITE);
 
     ElfUnload(&elffile);
 
@@ -546,7 +544,7 @@ struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename) {
     struct ropit_gadget_t *gadgets;
     IMAGE_SECTION_HEADER *sectionHeadersTable;
     IMAGE_NT_HEADERS *ntHeader = NULL;
-    size_t idxSection, idxGadget;
+    size_t idxSection;
     //
     size_t nGadgets, nInstructions;
 
@@ -620,7 +618,6 @@ struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename) {
 struct ropit_gadget_t* ropit_gadgets_find_in_file(char *filename) {
     FILE *fp = NULL;
     struct ropit_gadget_t *gadgets = NULL;
-    size_t idxGadget;
     struct filemap_t *fmap = NULL;
 
     if (!filename)

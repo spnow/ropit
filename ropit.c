@@ -22,6 +22,7 @@
 #include "gadgets.h"
 #include "file_pe.h"
 #include "file_elf.h"
+#include "ropit_options.h"
 
 int main (int argc, char *argv[]) {
     size_t idxGadget;
@@ -32,7 +33,7 @@ int main (int argc, char *argv[]) {
     printf("== ROPit v0.1 alpha 2 by m_101 ==\n");
     printf("=================================\n");
     if (argc < 2) {
-        printf("Usage: %s file\n\n", argv[0]);
+        usage(argv[0]);
         return -1;
     }
     printf("\n");
