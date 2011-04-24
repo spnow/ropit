@@ -9,6 +9,7 @@ void parse_options (int argc, char *argv[]);
 #define ROPIT_OPTION_FILE_IN        0
 #define ROPIT_OPTION_FILE_OUT       1
 #define ROPIT_OPTION_FILE_TYPE      2
+#define ROPIT_OPTION_OUTPUT_TYPE    3
 
 #define NUMBER_OF_OPTIONS           4
 

@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <string.h>
+
 #include "gadgets_data.h"
 
 struct ropit_offsets_t* ropit_offsets_new(size_t nElt) {
@@ -63,7 +65,7 @@ struct ropit_gadget_t* ropit_gadget_new(size_t n) {
     if (!gadget)
         return NULL;
 
-    gadget->gadgets = ropit_offsets_new(n);
+    gadget->offsets = ropit_offsets_new(n);
 
     return gadget;
 }
@@ -72,7 +74,7 @@ struct ropit_gadget_t* ropit_gadget_realloc(struct ropit_gadget_t *gadget, size_
     if (!gadget)
         return NULL;
 
-    gadget->gadgets = ropit_offsets_realloc(gadget->gadgets, n);
+    gadget->offsets = ropit_offsets_realloc(gadget->offsets, n);
 
     return gadget;
 }
@@ -83,7 +85,7 @@ void ropit_gadget_destroy(struct ropit_gadget_t **gadget) {
     if (!*gadget)
         return;
 
-    ropit_offsets_destroy(&((*gadget)->gadgets));
+    ropit_offsets_destroy(&((*gadget)->offsets));
     free(*gadget);
     *gadget = NULL;
 }
@@ -95,9 +97,11 @@ struct ropit_gadget_t* ropit_gadget_append (struct ropit_gadget_t *gadgets_list,
     if (!gadgets_list || !gadgets)
         return NULL;
 
-    gadgets_list = ropit_gadget_realloc(gadgets_list, gadgets_list->gadgets->used + gadgets->gadgets->used);
+    gadgets_list = ropit_gadget_realloc(gadgets_list, gadgets_list->offsets->used + gadgets->offsets->used);
     if (!gadgets_list)
         return NULL;
+    memcpy(gadgets_list->offsets + gadgets_list->offsets->used * sizeof(*(gadgets_list->offsets)),
+            gadgets->offsets, gadgets->offsets->used * sizeof(*(gadgets->offsets)));
 
     return gadgets_list;
 }

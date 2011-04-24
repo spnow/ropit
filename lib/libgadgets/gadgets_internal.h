@@ -24,6 +24,8 @@
 
 #include <stdlib.h>
 
+#include "gadgets_data.h"
+
 int compare_ints (const void * a, const void * b);
 // search some opcodes
 struct ropit_offsets_t* ropit_opcodes_find(unsigned char *bytes, size_t n,

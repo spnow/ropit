@@ -1,6 +1,8 @@
 #ifndef _GADGETS_DATA_H_
 #define _GADGETS_DATA_H_
 
+#include <stdlib.h>
+
 struct ropit_offsets_t {
     int *offsets;
     size_t capacity;
@@ -11,12 +13,13 @@ struct ropit_offsets_t* ropit_offsets_new(size_t size);
 struct ropit_offsets_t* ropit_offsets_realloc(struct ropit_offsets_t *ropmatch, size_t size);
 void ropit_offsets_destroy(struct ropit_offsets_t **match);
 size_t ropit_offsets_exist(struct ropit_offsets_t *array, int offset);
+int ropit_offsets_remove_dupe(struct ropit_offsets_t *array);
 
 
 
 struct ropit_gadget_t {
     // gadgets
-    struct ropit_offsets_t *gadgets;
+    struct ropit_offsets_t *offsets;
     // instructions
     size_t nInstructions;
 };

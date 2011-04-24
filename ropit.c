@@ -23,9 +23,9 @@
 #include "file_pe.h"
 #include "file_elf.h"
 #include "ropit_options.h"
+#include "gadgets_internal.h"
 
 int main (int argc, char *argv[]) {
-    size_t idxGadget;
     FILE *fp;
     struct ropit_gadget_t *gadgets;
 

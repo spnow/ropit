@@ -93,7 +93,7 @@ struct ropit_offsets_t* ropit_filter_regexp(unsigned char *bytes, size_t len, ch
     struct ropit_offsets_t *matches = NULL;
     int wspace[64] = {0}, wcount = 20;
     //
-    int start, mcount, idx;
+    size_t start, mcount, idx;
 
     matches = ropit_offsets_new(1200);
     if (!matches)
@@ -138,9 +138,9 @@ struct ropit_offsets_t* ropit_filter_ppr(unsigned char *bytes, size_t len) {
 struct ropit_offsets_t* ropit_instructions_find(unsigned char *bytes, size_t len) {
     int size;                /* size of instruction */
     x86_insn_t insn;         /* instruction */
-    long idx, idxValid;
+    size_t idx, idxValid;
     // dupe variables
-    long idxDupe, dupe;
+    size_t idxDupe, dupe;
     // back track instruction count
     long nBacktrackInst, nBacktrackBytes;
 
@@ -273,7 +273,7 @@ int ropit_instructions_check (char *inst, size_t len) {
         // logic
         "or", "and", "not", "neg", "xor",
         // jmp
-        // "jmp", "jnz", "jne", "je", "jz",
+        "jmp", "jnz", "jne", "je", "jz",
         "bswap",
         "nop",
         "set", "sto",
@@ -324,11 +324,11 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
     idxInstruction = 0;
     idxGadget = 0;
     while (idxInstruction < instructions->used) {
-        if (idxGadget >= gadget->gadgets->capacity)
-            gadget = ropit_gadget_realloc(gadget, gadget->gadgets->capacity * 2);
+        if (idxGadget >= gadget->offsets->capacity)
+            gadget = ropit_gadget_realloc(gadget, gadget->offsets->capacity * 2);
         // gadget start position
         pos = instructions->offsets[idxInstruction];
-        gadget->gadgets->offsets[idxGadget] = pos;
+        gadget->offsets->offsets[idxGadget] = pos;
         nInstructions = 0;
         // get gadgets
         do {
@@ -341,17 +341,23 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
                 // filter out bad instructions
                 if (ropit_instructions_check(disassembled, DISASSEMBLED_SIZE_MAX) == 0)
                     break;
-                if (strstr(gadgetline, "ret"))
+                if (strstr(gadgetline, "ret") || strstr(gadgetline, "jmp"))
                     break;
                 if (nInstructions >= 8)
                     break;
 
                 // construct gadget
+#ifdef PRINT_IN_COLOR
                 strncat(gadgetline, COLOR_RED, GADGET_SIZE_MAX - strlen(gadgetline));
                 strncat(gadgetline, disassembled, GADGET_SIZE_MAX - strlen(gadgetline));
                 strncat(gadgetline, COLOR_PURPLE, GADGET_SIZE_MAX - strlen(gadgetline));
                 strncat(gadgetline, " # ", GADGET_SIZE_MAX - strlen(gadgetline));
                 gadgetline[GADGET_SIZE_MAX-1] = '\0';
+#else
+                strncat(gadgetline, disassembled, GADGET_SIZE_MAX - strlen(gadgetline));
+                strncat(gadgetline, " # ", GADGET_SIZE_MAX - strlen(gadgetline));
+                gadgetline[GADGET_SIZE_MAX-1] = '\0';
+#endif
 
                 // go forward
                 pos += size;
@@ -365,17 +371,25 @@ struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint
         // if gadget found
         if (strlen(gadgetline) && nInstructions) {
             str_tabs2spaces(gadgetline, GADGET_SIZE_MAX);
-            printf("%s%p: %s\n", COLOR_GREEN, (void *)(base + gadget->gadgets->offsets[idxGadget]), gadgetline);
+#ifdef PRINT_IN_COLOR
+            printf("%s%p: %s\n", COLOR_GREEN, (void *)(base + gadget->offsets->offsets[idxGadget]), gadgetline);
+#else
+            printf("%p: %s\n", (void *)(base + gadget->offsets->offsets[idxGadget]), gadgetline);
+#endif
+            memset(gadgetline, 0, GADGET_SIZE_MAX);
             // for strncat() upper
             *gadgetline = '\0';
-            gadget->gadgets->used++;
+            gadget->offsets->used++;
             idxGadget++;
         }
 
         idxInstruction++;
     }
     x86_cleanup();
+
+#ifdef PRINT_IN_COLOR
     printf("%s\n", COLOR_WHITE);
+#endif
 
     gadget->nInstructions = instructions->used;
     ropit_offsets_destroy(&instructions);
@@ -413,6 +427,8 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
 
     // program segments parsing (sections are part of program segments)
     programHeadersTable = ElfGetProgramHeadersTable (elffile);
+    nInstructions = 0;
+    nGadgets = 0;
     if (!programHeadersTable) {
         fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Program Headers Table\n");
     }
@@ -425,7 +441,7 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
                 if (!gadgets)
                     continue;
 
-                nGadgets += gadgets->gadgets->used;
+                nGadgets += gadgets->offsets->used;
                 nInstructions += gadgets->nInstructions;
 
                 ropit_gadget_destroy(&gadgets);
@@ -433,10 +449,16 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
         }
     }
 
+#ifdef PRINT_IN_COLOR
     printf("\n== SUMMARY ==\n");
     printf("nInstructions: %s%lu\n", COLOR_YELLOW, nInstructions);
     printf("nGadgets: %s%lu\n", COLOR_YELLOW, nGadgets);
     printf("%s\n", COLOR_WHITE);
+#else
+    printf("\n== SUMMARY ==\n");
+    printf("nInstructions: %lu\n", nInstructions);
+    printf("nGadgets: %lu\n", nGadgets);
+#endif
 
     ElfUnload(&elffile);
 
@@ -484,7 +506,7 @@ struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename) {
             if (!gadgets)
                 continue;
 
-            nGadgets += gadgets->gadgets->used;
+            nGadgets += gadgets->offsets->used;
             nInstructions += gadgets->nInstructions;
 
             ropit_gadget_destroy(&gadgets);
@@ -551,7 +573,7 @@ ropit_gadgets_find_in_file_cleanup:
 }
 
 char* ropit_listing_disasm (unsigned char *bytes, size_t len) {
-    int pos = 0;             /* current position in buffer */
+    size_t pos = 0;             /* current position in buffer */
     int size;                /* size of instruction */
     x86_insn_t insn;         /* instruction */
     char line[4096] = {0};
@@ -587,7 +609,7 @@ char* ropit_instructions_show (unsigned char *bytes, size_t len) {
     x86_insn_t insn;         /* instruction */
     char line[4096] = {0};
     int linelen = 4096;
-    int idx;
+    size_t idx;
     struct ropit_offsets_t *instructions;
 
     instructions = ropit_instructions_find(bytes, len);

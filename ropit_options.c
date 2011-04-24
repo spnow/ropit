@@ -10,10 +10,14 @@ int ropit_option_file_input (int random) {
 
 // show how to use ROPit
 void usage(char *program) {
-    printf("Usage: %s file\n\n", program);
-    printf("--file-in   :  Name of input file\n");
-    printf("--file-out  :  Name of output file\n");
-    printf("--file-type :  executable or raw, will check both by default\n");
+    printf("ROPit 0.1 alpha 2 ( http://binholic.blogspot.com/ )\n");
+    printf("Usage: %s [options]\n\n", program);
+    printf("INPUT:\n");
+    printf("    --file-in   :  Name of input file\n");
+    printf("    --file-out  :  Name of output file\n");
+    printf("    --file-type :  executable or raw, will check both by default\n");
+    printf("OUTPUT:\n");
+    printf("    --output-type : txt\n");
 }
 
 // parse options and trigger actions
@@ -25,6 +29,7 @@ void parse_options (int argc, char *argv[]) {
         { "file-in", required_argument, NULL, ROPIT_OPTION_FILE_IN },
         { "file-out", no_argument, NULL, ROPIT_OPTION_FILE_OUT },
         { "file-type", required_argument, NULL, ROPIT_OPTION_FILE_TYPE },
+        { "output-type", required_argument, NULL, ROPIT_OPTION_OUTPUT_TYPE },
         { 0, 0, 0, 0 }
     };
 
