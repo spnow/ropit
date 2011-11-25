@@ -23,29 +23,30 @@
 #define GADGET_SIZE_MAX         2048
 
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "gadgets_data.h"
 
 int compare_ints (const void * a, const void * b);
 // search some opcodes
-struct ropit_offsets_t* ropit_opcodes_find(unsigned char *bytes, size_t n,
-        unsigned char *opcodes, size_t m, size_t szOpcode);
+struct ropit_offsets_t* ropit_opcodes_find(uint8_t *bytes, int szBytes,
+        uint8_t *opcodes, int szOps, int szOpcode);
 // search rets
-struct ropit_offsets_t* ropit_opcodes_find_ret(unsigned char *bytes, size_t len);
+struct ropit_offsets_t* ropit_opcodes_find_ret(uint8_t *bytes, int len);
 
 // filter by regexp
-struct ropit_offsets_t* ropit_filter_regexp(unsigned char *bytes, size_t len, char *expr);
+struct ropit_offsets_t* ropit_filter_regexp(uint8_t *bytes, int len, char *expr);
 // filter pop/pop/ret
-struct ropit_offsets_t* ropit_filter_ppr(unsigned char *bytes, size_t len);
+struct ropit_offsets_t* ropit_filter_ppr(uint8_t *bytes, int len);
 
 // find valid instructions offsets before ret
-struct ropit_offsets_t* ropit_instructions_find(unsigned char *bytes, size_t len);
+struct ropit_offsets_t* ropit_instructions_find(uint8_t *bytes, int len);
 
 // find gadgets offsets
 // construct gadgets from instructions finder
-struct ropit_gadget_t* ropit_gadgets_find(unsigned char *bytes, size_t len, uint64_t base);
+struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base);
 
-char* ropit_listing_disasm (unsigned char *bytes, size_t len);
-char* ropit_instructions_show (unsigned char *bytes, size_t len);
+char* ropit_listing_disasm (uint8_t *bytes, int len);
+char* ropit_instructions_show (uint8_t *bytes, int len);
 
 #endif

@@ -18,7 +18,7 @@ endef
 
 all: $(TARGET)
 
-$(TARGET): libbparse libgadgets $(OBJS)
+$(TARGET): libbparse libgadgets libfile $(OBJS)
 	libtool --mode=link $(CC) $(LDFLAGS) -o $(TARGET) $(OBJS) $(LDLIBS) $(HEADERS)
 
 %.o: %.c
@@ -27,8 +27,11 @@ $(TARGET): libbparse libgadgets $(OBJS)
 libbparse:
 	cd $(LIBDIR)/libbparse/src && $(MAKE)
 
-libgadgets:	libbparse
+libgadgets:	libbparse libfile
 	cd $(LIBDIR)/libgadgets && $(MAKE)
+
+libfile:
+	cd $(LIBDIR)/libfile-rop && $(MAKE)
 
 .PHONY: clean mrproper
 
@@ -39,3 +42,4 @@ clean:
 	rm -f *.o
 	cd $(LIBDIR)/libbparse/src && $(MAKE) clean
 	cd $(LIBDIR)/libgadgets && $(MAKE) clean
+	rm -rf .libs

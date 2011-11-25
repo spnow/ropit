@@ -23,6 +23,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#define GADGET_FILE_CACHE   "tmp/gadget_cache"
+#define GADGET_FILE_RESUME  "tmp/gadget_resume"
+
 /* colors */
 #define COLOR_PURPLE    "\033[95m"
 #define COLOR_BLUE      "\033[94m"
@@ -30,6 +33,33 @@
 #define COLOR_YELLOW    "\033[93m"
 #define COLOR_RED       "\033[91m"
 #define COLOR_WHITE     "\033[0m"
+
+// one gadget
+struct gadget_t {
+    // address of gadget
+    uint64_t address;
+    // binary repr
+    int16_t lenBytes;
+    int16_t szBytes;
+    uint8_t *bytes;
+    // disassembled repr
+    int16_t lenRepr;
+    int16_t szRepr;
+    uint8_t *repr;
+};
+
+// allocate new gadget
+struct gadget_t* gadget_new(void);
+// destroy gadget
+void gadget_destroy(struct gadget_t **gadget);
+
+// generic callback
+struct gadget_callbacks_t {
+    // find branching instructions
+    struct offset_t* (*find_branches)(uint8_t *bytes, int nBytes);
+    // find gadgets
+    struct offset_t* (*find_gadgets)(uint8_t *bytes, int nBytes);
+};
 
 // find gadgets in ELF file
 struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename);

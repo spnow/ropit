@@ -1,5 +1,5 @@
 INCDIR = ..
-HEADERS = -I$(INCDIR)/libbparse/src
+HEADERS = -I$(INCDIR)/libbparse/src -I$(INCDIR)/libfile-rop
 
 CC	=	gcc
 CFLAGS	=	-g -O2 -Wall -W
@@ -13,7 +13,7 @@ define link_rule
 endef
 
 LIB_NAME = libgadgets.la
-LIB_OBJS = gadgets.lo string_extended.lo
+LIB_OBJS = gadgets.lo string_extended.lo offsets.lo gadgets_cache.lo ../libfile-rop/byte-order.lo
 
 %.lo: %.c
 	$(call compile_rule)

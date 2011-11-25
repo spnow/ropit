@@ -23,11 +23,11 @@
 #include "file_pe.h"
 #include "file_elf.h"
 #include "ropit_options.h"
-#include "gadgets_internal.h"
 
 int main (int argc, char *argv[]) {
-    FILE *fp;
-    struct ropit_gadget_t *gadgets;
+    FILE *fp_file;
+    FILE *fp_cache;
+    int countGadgets;
 
     printf("=================================\n");
     printf("== ROPit v0.1 alpha 2 by m_101 ==\n");
@@ -38,21 +38,40 @@ int main (int argc, char *argv[]) {
     }
     printf("\n");
 
-    fp = fopen(argv[1], "r");
-    if (!fp) {
+    fp_file = fopen(argv[1], "r");
+    if (!fp_file) {
         fprintf(stderr, "Failed opening file '%s' (r)\n", argv[1]);
         return -2;
     }
 
-    if (ElfCheck(fp) || PeCheck(fp))
-        gadgets = ropit_gadgets_find_in_executable(argv[1]);
+    if (ElfCheck(fp_file) || PeCheck(fp_file))
+        ropit_gadgets_find_in_executable(argv[1]);
     else
-        gadgets = ropit_gadgets_find_in_file(argv[1]);
+        ropit_gadgets_find_in_file(argv[1]);
+
+    printf("showing gadgets in cache\n");
+    fp_cache = fopen("tmp/gadget_cache", "rb");
+    if (!fp_cache)
+        goto ropit_cleanup;
+    countGadgets = gadget_cache_fshow(fp_cache);
+#ifdef PRINT_IN_COLOR
+    printf("\n== SUMMARY ==\n");
+    // printf("nInstructions: %s%lu\n", COLOR_YELLOW, nInstructions);
+    // printf("nGadgets: %s%lu\n", COLOR_YELLOW, nGadgets);
+    printf("%s\n", COLOR_WHITE);
+#else
+    printf("\n== SUMMARY ==\n");
+    // printf("nInstructions: %lu\n", nInstructions);
+    // printf("nGadgets: %lu\n", nGadgets);
+#endif
+    printf("Found %d gadgets\n", countGadgets);
+
 
     // clean up
 ropit_cleanup:
-    fclose(fp);
-    ropit_gadget_destroy(&gadgets);
+    fclose(fp_file);
+    fclose(fp_cache);
 
     return 0;
 }
+
