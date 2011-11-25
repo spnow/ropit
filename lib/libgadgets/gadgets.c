@@ -471,6 +471,9 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
 
                 // reset cache
                 gadget_cache_reset(gcache);
+
+                // add non added gadget
+                retcode = gadget_cache_add_gadget(gcache, &(gadgets[idxGadget]));
             }
         }
 
