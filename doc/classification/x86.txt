@@ -1,0 +1,25 @@
+memory:
+- mov r32, r/m32
+- mov r/m32, r32
+- xchg e?x, e??x
+- xor r32, r32
+
+endianness:
+- bswap r32
+
+stack:
+- pop r32
+- push r32
+
+arithmetic:
+- add [e?x], e??x
+- sub e?x, e??x
+- add esi, esi
+- mul
+- inc r32
+- adc
+
+branch:
+- jmp [r32]
+- call [r32]
+
