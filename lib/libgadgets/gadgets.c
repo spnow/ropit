@@ -107,6 +107,12 @@ struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
         return NULL;
     }
 
+    // check src
+    if (!src->bytes || !src->repr) {
+        fprintf(stderr, "error: gadget_copy(): src has no elements\n");
+        return NULL;
+    }
+
     // 
     if (dest->szBytes != src->szBytes)
         dest->bytes = realloc(dest->bytes, src->szBytes * sizeof(*dest->bytes));
@@ -563,6 +569,15 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     }
     x86_cleanup();
 
+    // free cache
+    countGadgets += gadget_cache_fwrite_threaded(fp_cache, gcache);
+    // reset in order to avoid segfault
+    gadget_cache_reset(gcache);
+    // destroy thread local cache
+    _gadget_cache_destroy_thread_data(gcache);
+    //
+    gadget_cache_destroy(&gcache);
+
     // clean up
     // free gadgets
     for (idxGadget = 0; idxGadget < nGadgets; idxGadget++) {
@@ -570,14 +585,6 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
         free(gadgets[idxGadget].repr);
     }
     free(gadgets);
-
-    // free cache
-    countGadgets += gadget_cache_fwrite(fp_cache, gcache);
-    // reset in order to avoid segfault
-    gadget_cache_reset(gcache);
-    gadget_cache_destroy(&gcache);
-    // destroy thread local cache
-    _gadget_cache_destroy_thread_data(&gcache_thread);
 
     // free instructions
     ropit_offsets_destroy(&instructions);

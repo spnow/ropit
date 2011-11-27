@@ -8,6 +8,12 @@
 #include "byte-order.h"
 #include "gadgets_cache.h"
 
+/* thread cache */
+// allocate gadget cache thread local storage
+struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache);
+// destroy gadget cache thread local storage
+void _gadget_cache_destroy_thread_data(struct gadget_cache_t *cache);
+
 // fwrite thread callback
 void *gadget_cache_fwrite_thread(void *data);
 
@@ -40,21 +46,21 @@ struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cach
     retcode = pthread_mutex_init(&thread_lcache->fwrite_mutex, NULL);
     if (retcode != 0) {
         fprintf(stderr, "_gadget_cache_new_thread_data(): error: fwrite_mutex init failed\n");
-        return ERR_GADGET_CACHE_UNDEFINED;
+        return NULL;
     }
 
     // init mutexes
     retcode = pthread_mutex_init(&thread_lcache->countGadgets_mutex, NULL);
     if (retcode != 0) {
         fprintf(stderr, "_gadget_cache_new_thread_data(): error: countGadgets mutex init failed\n");
-        return ERR_GADGET_CACHE_UNDEFINED;
+        return NULL;
     }
 
     // init semaphore
     retcode = sem_init(&thread_lcache->fwrite_sem, 0, 0);
     if (retcode != 0) {
         fprintf(stderr, "_gadget_cache_new_thread_data(): error: fwrite semaphore init failed\n");
-        return ERR_GADGET_CACHE_UNDEFINED;
+        return NULL;
     }
 
     // create thead
@@ -62,37 +68,41 @@ struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cach
     retcode = pthread_create(&thread_lcache->fwrite_thread, NULL, gadget_cache_fwrite_thread, (void *)thread_lcache);
     if (retcode != 0) {
         fprintf(stderr, "_gadget_cache_new_thread_data(): error: fwrite thread creation failed\n");
-        return ERR_GADGET_CACHE_UNDEFINED;
+        return NULL;
     }
     fprintf(stderr, "Thread created\n");
 
-    return thread_lcache;
+    return cache;
 }
 
 // destroy gadget cache thread local storage
-void _gadget_cache_destroy_thread_data(struct gadget_cache_t **thread_lcache) {
+void _gadget_cache_destroy_thread_data(struct gadget_cache_t *gcache) {
+    struct gadget_cache_t *thread_lcache;
     // check parameters
-    if (!thread_lcache || !*thread_lcache)
+    if (!gcache)
+        return;
+    thread_lcache = gcache->thread_cache;
+    if (!thread_lcache)
         return;
 
     // ensure we are not writing to file
-    pthread_mutex_lock(&(*thread_lcache)->fwrite_mutex);
+    pthread_mutex_lock(&thread_lcache->fwrite_mutex);
     fprintf(stderr, "Destroying thread local cache\n");
 
     // trigger thread exit
-    (*thread_lcache)->state = GADGET_CACHE_STATE_END;
-    sem_post(&(*thread_lcache)->fwrite_sem);
+    thread_lcache->state = GADGET_CACHE_STATE_END;
+    sem_post(&thread_lcache->fwrite_sem);
 
     // wait for thread completion
-    pthread_join((*thread_lcache)->fwrite_thread, NULL);
+    pthread_join(thread_lcache->fwrite_thread, NULL);
 
     // destroy mutex
-    pthread_mutex_destroy(&(*thread_lcache)->fwrite_mutex);
+    pthread_mutex_destroy(&thread_lcache->fwrite_mutex);
     // destroy semaphore
-    sem_destroy(&(*thread_lcache)->fwrite_sem);
+    sem_destroy(&thread_lcache->fwrite_sem);
 
     // destroy cache
-    gadget_cache_destroy(thread_lcache);
+    gadget_cache_destroy(&gcache->thread_cache);
 }
 
 /* cache structure */
@@ -195,11 +205,14 @@ int gadget_cache_add_gadget(struct gadget_cache_t *cache, struct gadget_t *gadge
     }
 
     // re-adjust used if inferior of equal to 0
-    cache->used =  (cache->used <= 0) ? 0 : cache->used;
+    cache->used = (cache->used <= 0) ? 0 : cache->used;
 
     // if cache full
-    if (cache->used >= cache->capacity)
+    if (cache->used >= cache->capacity) {
+        // re-adjust used
+        cache->used = (cache->used > cache->capacity) ? cache->capacity : cache->used;
         return ERR_GADGET_CACHE_FULL;
+    }
 
     // add to cache
     if (gadget_cache_set(cache, cache->used, gadget) != NULL)
@@ -213,7 +226,7 @@ struct gadget_t* gadget_cache_get(struct gadget_cache_t *cache, int index) {
     if (!cache)
         return NULL;
 
-    if (index < 0 || index > cache->used || index >= cache->capacity)
+    if (index < 0 || index >= cache->used || index >= cache->capacity)
         return NULL;
 
     return cache->gadgets[index];
@@ -445,11 +458,14 @@ void *gadget_cache_fwrite_thread(void *data) {
     while (thread_lcache && thread_lcache->state != GADGET_CACHE_STATE_END) {
         // waiting for available data
         sem_wait(&thread_lcache->fwrite_sem);
-        if (thread_lcache == NULL || thread_lcache->state == GADGET_CACHE_STATE_END)
+        if (thread_lcache == NULL || thread_lcache->state == GADGET_CACHE_STATE_END) {
+            fprintf(stderr, "gadget_cache_fwrite_thread(): no local storage or thread ended\n");
             break;
+        }
 
         // write to file
         pthread_mutex_lock(&thread_lcache->fwrite_mutex);
+        fprintf(stderr, "gadget_cache_fwrite_thread(): Local cache size: %d\n", gadget_cache_get_size(thread_lcache));
         thread_lcache->countGadgets += gadget_cache_fwrite(thread_lcache->fp, thread_lcache);
         // finished writingg to file
         pthread_mutex_unlock(&thread_lcache->fwrite_mutex);
@@ -481,11 +497,16 @@ int gadget_cache_fwrite_threaded(FILE *fp, struct gadget_cache_t *cache) {
     // ensure we are not writing to file yet
     pthread_mutex_lock(&local_cache->fwrite_mutex);
 
+    // file pointer
+    local_cache->fp = fp;
+
     // make copy of cache
     if (gadget_cache_copy(local_cache, cache) == NULL)
         fprintf(stderr, "Failed copying to thread local cache\n");
     else {
-        fprintf(stderr, "Emptying cache\n");
+        fprintf(stderr, "\nEmptying cache\n");
+        fprintf(stderr, "Cache size: %d\n", gadget_cache_get_size(cache));
+        fprintf(stderr, "Local cache size: %d\n", gadget_cache_get_size(local_cache));
         sem_post(&local_cache->fwrite_sem);
     }
 

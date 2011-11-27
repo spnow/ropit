@@ -22,6 +22,12 @@
 #define GADGET_CACHE_STATE_FREAD        2
 #define GADGET_CACHE_STATE_FWRITE       3
 
+struct gadget_cache_thread_data_t {
+};
+
+struct gadget_cache_data_t {
+};
+
 struct gadget_cache_t {
     // number of gadgets in cache
     int used;
@@ -43,12 +49,6 @@ struct gadget_cache_t {
     sem_t fwrite_sem;
     struct gadget_cache_t *thread_cache;
 };
-
-/* thread cache */
-// allocate gadget cache thread local storage
-struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache);
-// destroy gadget cache thread local storage
-void _gadget_cache_destroy_thread_data(struct gadget_cache_t **thread_lcache);
 
 /* cache structure */
 // allocate cache
