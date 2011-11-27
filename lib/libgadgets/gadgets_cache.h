@@ -65,6 +65,8 @@ int gadget_cache_add_gadget(struct gadget_cache_t *cache, struct gadget_t *gadge
 struct gadget_t* gadget_cache_get(struct gadget_cache_t *cache, int index);
 // set element at index
 struct gadget_t* gadget_cache_set(struct gadget_cache_t *cache, int index, struct gadget_t *gadget);
+// zero entirely the cache
+int gadget_cache_zero(struct gadget_cache_t *cache);
 // purge cache: just "free" by resetting the used counter
 int gadget_cache_reset(struct gadget_cache_t *cache);
 // purge cache: "free" and re-init the cache

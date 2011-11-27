@@ -27,6 +27,7 @@
 #include <libdis.h>
 #include <pcre.h>
 
+#include "arch/arch.h"
 #include "byte-order.h"
 #include "file_elf.h"
 #include "file_pe.h"
@@ -55,14 +56,14 @@ struct gadget_t* gadget_new_copy(struct gadget_t *gadget) {
 
     //
     if (!gadget) {
-        fprintf(stderr, "error: gadget_new_copy(): gadget was null\n");
+        // fprintf(stderr, "error: gadget_new_copy(): gadget was null\n");
         return NULL;
     }
 
     // allocs
     copy = gadget_new();
     if (!copy) {
-        fprintf(stderr, "error: gadget_new_copy(): copy was not allocated\n");
+        // fprintf(stderr, "error: gadget_new_copy(): copy was not allocated\n");
         return NULL;
     }
     copy->repr = calloc(gadget->szRepr, sizeof(*copy->repr));
@@ -114,15 +115,19 @@ struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     }
 
     // 
-    if (dest->szBytes != src->szBytes)
+    if (dest->szBytes != src->szBytes) {
+        fprintf(stderr, "warning: gadget_copy(): realloc of dest->bytes\n");
         dest->bytes = realloc(dest->bytes, src->szBytes * sizeof(*dest->bytes));
+    }
     // 
-    if (dest->szRepr != src->szRepr)
+    if (dest->szRepr != src->szRepr) {
+        fprintf(stderr, "warning: gadget_copy(): realloc of dest->repr\n");
         dest->repr = realloc(dest->repr, src->szRepr * sizeof(*dest->repr));
+    }
 
     // check
     if (dest->bytes == NULL || dest->repr == NULL) {
-        fprintf(stderr, "error: gadget_copy(): dest->bytes or dest->repr are not allocated\n");
+        fprintf(stderr, "error: gadget_copy(): dest->bytes = %p or dest->repr = %p\n", dest->bytes, dest->repr);
         return NULL;
     }
 
@@ -179,14 +184,6 @@ struct ropit_offsets_t* ropit_opcodes_find(uint8_t *bytes, int szBytes,
     return ops;
 }
 
-// search rets
-struct ropit_offsets_t* ropit_opcodes_find_ret(uint8_t *bytes, int len) {
-    uint8_t opcodes[] = "\xc3\xc2\xca\xcb\xcf";
-    struct ropit_offsets_t *rets = ropit_opcodes_find(bytes, len, opcodes, strlen((char*)opcodes), 1);
-
-    return rets;
-}
-
 //
 struct ropit_offsets_t* ropit_filter_regexp(uint8_t *bytes, int len, char *expr) {
     pcre *pattern = NULL;
@@ -231,10 +228,6 @@ struct ropit_offsets_t* ropit_filter_regexp(uint8_t *bytes, int len, char *expr)
     matches->used = mcount;
 
     return matches;
-}
-
-struct ropit_offsets_t* ropit_filter_ppr(uint8_t *bytes, int len) {
-    return ropit_filter_regexp(bytes, len, "(pop\\s+\\w{3}\\s+){2}\\s*ret");
 }
 
 // find valid instructions offsets before ret
@@ -372,61 +365,17 @@ int ropit_pointers_check_pointer_characteristics() {
     return 0;
 }
 
-// check if inst is good
-int ropit_instructions_check (char *inst, int len) {
-    char *good[] = {
-        // stack
-        "pop", "push",
-        "leave", "ret",
-        "call",
-        // arithmetic
-        "adc", "add", "sbb", "sub", "imul", "mul", "idiv", "div",
-        // shifts
-        "rcl", "rcr", "rol", "ror", "sal", "sar", "shl", "shr",
-        // memvalue
-        "lea",
-        "xadd", "xchg", "mov",
-        // eflags
-        "lahf", "sahf", "pushf", "popf",
-        // converts
-        "cbw", "cdq", "cwde", "cwd",
-        // 
-        "inc", "dec", 
-        // logic
-        "or", "and", "not", "neg", "xor",
-        // jmp
-        "jmp", "jnz", "jne", "je", "jz",
-        "bswap",
-        "nop",
-        "set", "sto",
-        NULL
-    };
-    int idxGood;
-
-    if (!inst)
-        return 0;
-
-    idxGood = 0;
-    while (good[idxGood] != NULL) {
-        if (strstr(inst, good[idxGood]))
-            return 1;
-        idxGood++;
-    }
-
-    return 0;
-}
-
 // find gadgets offsets
 // construct gadgets from instructions finder
 struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base) {
     // disasm
     struct ropit_offsets_t *instructions = NULL;
     int idxInstruction;
-    int pos = 0;             /* current position in buffer */
+    int pos = 0;            /* current position in buffer */
     int startpos = 0;       // starting position in buffer
-    int size;                /* size of instruction */
-    int nInstructions;
-    x86_insn_t insn;         /* instruction */
+    int size;               /* size of instruction */
+    int nInstructions;      // number of instructions in gadget
+    x86_insn_t insn;        /* instruction */
     uint64_t base_addr_be;  // base address in big endian
     // instruction str buffer
     char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
@@ -539,6 +488,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
 
         // if gadget found
         if (strlen(gadgetline) && nInstructions) {
+            // replace tabulations by spaces
             str_tabs2spaces(gadgetline, GADGET_SIZE_MAX);
 
             // set gadget
@@ -547,7 +497,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
             gadgets[idxGadget].lenBytes = 0;
             gadgets[idxGadget].lenRepr = strlen(gadgets[idxGadget].repr);
 
-            //
+            // reset gadgetline
             memset(gadgetline, 0, GADGET_SIZE_MAX);
 
             // save gadget offset in cache
@@ -571,10 +521,11 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
 
     // free cache
     countGadgets += gadget_cache_fwrite_threaded(fp_cache, gcache);
-    // reset in order to avoid segfault
-    gadget_cache_reset(gcache);
     // destroy thread local cache
     _gadget_cache_destroy_thread_data(gcache);
+    // zero out our cache to avoid segfault
+    // (since we are not referencing heap alloced buffers)
+    gadget_cache_zero(gcache);
     //
     gadget_cache_destroy(&gcache);
 
@@ -725,70 +676,6 @@ struct ropit_gadget_t* ropit_gadgets_find_in_file(char *filename) {
 ropit_gadgets_find_in_file_cleanup:
     fclose(fp);
     filemap_destroy(&fmap);
-
-    return NULL;
-}
-
-char* ropit_listing_disasm (uint8_t *bytes, int len) {
-    int pos = 0;             /* current position in buffer */
-    int size;                /* size of instruction */
-    x86_insn_t insn;         /* instruction */
-    char line[4096] = {0};
-    int linelen = 4096;
-    char *listing = NULL;
-
-    listing = calloc(2048, sizeof(*listing));
-
-    x86_init(opt_none, NULL, NULL);
-    while ( pos < len ) {
-        /* disassemble address */
-        size = x86_disasm(bytes, len, 0, pos, &insn);
-        if ( size ) {
-            /* print instruction */
-            x86_format_insn(&insn, line, linelen, intel_syntax);
-            // printf("%s\n", line);
-            strcat(listing, line);
-            strcat(listing, "\n");
-            pos += size;
-        }
-        else {
-            pos++;
-        }
-        x86_oplist_free(&insn);
-    }
-    x86_cleanup();
-
-    return listing;
-}
-
-char* ropit_instructions_show (uint8_t *bytes, int len) {
-    int size;                /* size of instruction */
-    x86_insn_t insn;         /* instruction */
-    char line[4096] = {0};
-    int linelen = 4096;
-    int idx;
-    struct ropit_offsets_t *instructions;
-
-    instructions = ropit_instructions_find(bytes, len);
-    if (!instructions)
-        return NULL;
-
-    x86_init(opt_none, NULL, NULL);
-    printf("used: %d\n", instructions->used);
-    for (idx = 0; idx < instructions->used; idx++) {
-        size = x86_disasm(bytes, len, 0, instructions->offsets[idx], &insn);
-        if ( size ) {
-            x86_format_insn(&insn, line, linelen, intel_syntax);
-            printf("instruction[%d] at offset %d with size %d: %s\n", idx, instructions->offsets[idx], size, line);
-        }
-        else {
-            printf("this isn't an instruction\n");
-        }
-        x86_oplist_free(&insn);
-    }
-    x86_cleanup();
-
-    ropit_offsets_destroy(&instructions);
 
     return NULL;
 }
