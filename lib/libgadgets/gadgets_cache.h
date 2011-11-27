@@ -1,6 +1,9 @@
 #ifndef _ROPIT_GADGETS_CACHE_H_
 #define _ROPIT_GADGETS_CACHE_H_
 
+#include <pthread.h>
+#include <semaphore.h>
+
 #include "gadgets.h"
 
 // generic
@@ -14,24 +17,54 @@
 #define ERR_GADGET_CACHE_FILE_UNDEFINED -1
 #define ERR_GADGET_CACHE_FILE_INVALID   -2
 
+// state
+#define GADGET_CACHE_STATE_END          1
+#define GADGET_CACHE_STATE_FREAD        2
+#define GADGET_CACHE_STATE_FWRITE       3
+
 struct gadget_cache_t {
     // number of gadgets in cache
     int used;
     // cache size
     int capacity;
-    //
+    // stored gadgets in cache
     struct gadget_t **gadgets;
+
+    // thread data
+    int countGadgets;
+    pthread_mutex_t countGadgets_mutex;
+    // state: END, FREAD, FWRITE    
+    int state;
+    // file
+    FILE *fp;
+    pthread_t fwrite_thread;
+    // mutex for file access and thread_cache access (which can be this)
+    pthread_mutex_t fwrite_mutex;
+    sem_t fwrite_sem;
+    struct gadget_cache_t *thread_cache;
 };
+
+/* thread cache */
+// allocate gadget cache thread local storage
+struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache);
+// destroy gadget cache thread local storage
+void _gadget_cache_destroy_thread_data(struct gadget_cache_t **thread_lcache);
 
 /* cache structure */
 // allocate cache
 struct gadget_cache_t* gadget_cache_new(int nGadget);
+// allocate gadget cache by copy
+struct gadget_cache_t* gadget_cache_new_copy(struct gadget_cache_t *cache);
 // destroy cache
 void gadget_cache_destroy(struct gadget_cache_t **cache);
+// gadget cache copy (both cache must have the same size)
+struct gadget_cache_t* gadget_cache_copy(struct gadget_cache_t *dest, struct gadget_cache_t *src);
 // add gadget to cache
 int gadget_cache_add_gadget(struct gadget_cache_t *cache, struct gadget_t *gadget);
 // get element at index
 struct gadget_t* gadget_cache_get(struct gadget_cache_t *cache, int index);
+// set element at index
+struct gadget_t* gadget_cache_set(struct gadget_cache_t *cache, int index, struct gadget_t *gadget);
 // purge cache: just "free" by resetting the used counter
 int gadget_cache_reset(struct gadget_cache_t *cache);
 // purge cache: "free" and re-init the cache
@@ -48,6 +81,8 @@ int gadget_cache_fcheck(FILE *fp);
 // save cache to file
 // return number of gadgets written
 int gadget_cache_fwrite(FILE *fp, struct gadget_cache_t *cache);
+// thread fwrite to augment data througput on multi-core systems
+int gadget_cache_fwrite_threaded(FILE *fp, struct gadget_cache_t *cache);
 // load file to cache
 // return number of gadgets readed
 int gadget_cache_fread(FILE *fp, struct gadget_cache_t **cache, int nRead);

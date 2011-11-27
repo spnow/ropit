@@ -3,7 +3,7 @@ HEADERS = -I$(INCDIR)/libbparse/src -I$(INCDIR)/libfile-rop
 
 CC	=	gcc
 CFLAGS	=	-g -O2 -Wall -W
-LDFLAGS = -ldisasm -lpcre
+LDFLAGS = -ldisasm -lpcre -lpthread -D_REENTRANT
 
 define compile_rule
 	libtool --mode=compile $(CC) $(CFLAGS) $(HEADERS) $(CPPFLAGS) -c $<

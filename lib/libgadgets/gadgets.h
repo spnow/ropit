@@ -50,8 +50,12 @@ struct gadget_t {
 
 // allocate new gadget
 struct gadget_t* gadget_new(void);
+// allocate new gadget and copy old
+struct gadget_t* gadget_new_copy(struct gadget_t *gadget);
 // destroy gadget
 void gadget_destroy(struct gadget_t **gadget);
+// copy a gadget to another one
+struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src);
 
 // generic callback
 struct gadget_callbacks_t {

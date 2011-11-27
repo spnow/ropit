@@ -49,6 +49,46 @@ struct gadget_t* gadget_new(void) {
     return gadget;
 }
 
+// allocate new gadget and copy old
+struct gadget_t* gadget_new_copy(struct gadget_t *gadget) {
+    struct gadget_t *copy;
+
+    //
+    if (!gadget) {
+        fprintf(stderr, "error: gadget_new_copy(): gadget was null\n");
+        return NULL;
+    }
+
+    // allocs
+    copy = gadget_new();
+    if (!copy) {
+        fprintf(stderr, "error: gadget_new_copy(): copy was not allocated\n");
+        return NULL;
+    }
+    copy->repr = calloc(gadget->szRepr, sizeof(*copy->repr));
+    copy->bytes = calloc(gadget->szBytes, sizeof(*copy->bytes));
+
+    // if one of the alloc failed
+    // then copied object failed
+    if (copy->repr == NULL || copy->bytes == NULL) {
+        fprintf(stderr, "error: gadget_new_copy(): failed bytes and repr allocation\n");
+        free(copy->repr);
+        free(copy->bytes);
+
+        return NULL;
+    }
+
+    // if copy failed
+    // then bye
+    if (gadget_copy(copy, gadget) == NULL) {
+        fprintf(stderr, "error: gadget_new_copy(): failed copy\n");
+        gadget_destroy(&copy);
+        return NULL;
+    }
+
+    return copy;
+}
+
 // destroy gadget
 void gadget_destroy(struct gadget_t **gadget) {
     if (!gadget || !(*gadget))
@@ -57,6 +97,40 @@ void gadget_destroy(struct gadget_t **gadget) {
     free((*gadget)->repr);
     free((*gadget)->bytes);
     *gadget = NULL;
+}
+
+// copy a gadget to another one
+struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
+    // check parameters
+    if (!dest || !src) {
+        fprintf(stderr, "error: gadget_copy(): dest or src are non existent\n");
+        return NULL;
+    }
+
+    // 
+    if (dest->szBytes != src->szBytes)
+        dest->bytes = realloc(dest->bytes, src->szBytes * sizeof(*dest->bytes));
+    // 
+    if (dest->szRepr != src->szRepr)
+        dest->repr = realloc(dest->repr, src->szRepr * sizeof(*dest->repr));
+
+    // check
+    if (dest->bytes == NULL || dest->repr == NULL) {
+        fprintf(stderr, "error: gadget_copy(): dest->bytes or dest->repr are not allocated\n");
+        return NULL;
+    }
+
+    dest->address = src->address;
+    dest->lenBytes = src->lenBytes;
+    dest->szBytes = src->szBytes;
+    dest->lenRepr = src->lenRepr;
+    dest->szRepr = src->szRepr;
+
+    // copy repr and bytes
+    memcpy(dest->bytes, src->bytes, src->szBytes);
+    memcpy(dest->repr, src->repr, src->szRepr);
+
+    return dest;
 }
 
 int compare_ints (const void * a, const void * b) {
@@ -353,7 +427,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     int disasLength;
     char gadgetline[GADGET_SIZE_MAX] =  {0};
     // gadget cache: once the cache is full we write it to file
-    struct gadget_cache_t *gcache;
+    struct gadget_cache_t *gcache, *gcache_thread;
     struct gadget_t *gadget, *cached;
     int idxCache;
     // gadgets
@@ -382,6 +456,14 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     gcache = gadget_cache_new(1024);
     if (!gcache)
         return NULL;
+    gcache->fp = fp_cache;
+
+    // create local thread storage
+    gcache_thread = _gadget_cache_new_thread_data(gcache);
+    if (!gcache_thread) {
+        fprintf(stderr, "cache copy failed\n");
+        return ERR_GADGET_CACHE_UNDEFINED;
+    }
 
     // gadgets
     nGadgets = gadget_cache_get_capacity(gcache);
@@ -467,7 +549,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
 
             // writing cache to file
             if (retcode == ERR_GADGET_CACHE_FULL) {
-                countGadgets += gadget_cache_fwrite(fp_cache, gcache);
+                countGadgets += gadget_cache_fwrite_threaded(fp_cache, gcache);
 
                 // reset cache
                 gadget_cache_reset(gcache);
@@ -494,6 +576,8 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     // reset in order to avoid segfault
     gadget_cache_reset(gcache);
     gadget_cache_destroy(&gcache);
+    // destroy thread local cache
+    _gadget_cache_destroy_thread_data(&gcache_thread);
 
     // free instructions
     ropit_offsets_destroy(&instructions);
