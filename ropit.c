@@ -33,7 +33,8 @@ int main (int argc, char *argv[]) {
     printf("== ROPit v0.1 alpha 2 by m_101 ==\n");
     printf("=================================\n");
     if (argc < 2) {
-        usage(argv[0]);
+        // usage(argv[0]);
+        printf("Usage: %s filename\n", argv[0]);
         return -1;
     }
     printf("\n");

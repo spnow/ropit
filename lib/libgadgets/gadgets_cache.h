@@ -23,9 +23,52 @@
 #define GADGET_CACHE_STATE_FWRITE       3
 
 struct gadget_cache_thread_data_t {
+    // gadgets written count
+    int countGadgets;
+    pthread_mutex_t countGadgets_mutex;
+
+    // state: END, FREAD, FWRITE    
+    int state;
+
+    // thread for file writing
+    pthread_t fwrite_thread;
+    // mutex for file writing and any caches that is written to the file
+    pthread_mutex_t fwrite_mutex;
+
+    // mutex when looking for instructions
+    // find rets -> find for instructions -> find gadgets
+    pthread_mutex_t find_inst_mutex;
+
+    // number of gadget threads
+    int nGadgetsThreads;
+    // threads for finding gadgets
+    pthread_t *gadgets_threads;
+    // semaphore for thread_cache access
+    sem_t *cache_sem;
+
+    // thread local cache
+    struct gadget_cache_t *thread_cache;
 };
 
 struct gadget_cache_data_t {
+    // number of gadgets in cache
+    int used;
+    // cache size
+    int capacity;
+    // stored gadgets in cache
+    struct gadget_t **gadgets;
+};
+
+struct gadget_ncache_t {
+    // file
+    FILE *fp;
+
+    // cache
+    struct gadget_cache_data_t *cache;
+
+    // threads
+    // threads local storage
+    struct gadget_cache_thread_data_t *tdata;
 };
 
 struct gadget_cache_t {

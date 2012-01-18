@@ -18,11 +18,14 @@ struct ropit_offsets_t* ropit_offsets_new(int nElt) {
 }
 
 struct ropit_offsets_t* ropit_offsets_realloc(struct ropit_offsets_t *ropmatch, int nElt) {
-    if (!ropmatch)
+    if (!ropmatch || nElt <= 0)
         return NULL;
 
     ropmatch->offsets = realloc(ropmatch->offsets, nElt * sizeof(*(ropmatch->offsets)));
     ropmatch->capacity = nElt;
+    //
+    if (ropmatch->used > nElt)
+        ropmatch->used = nElt;
 
     return ropmatch;
 }
@@ -51,4 +54,32 @@ int ropit_offsets_exist(struct ropit_offsets_t *array, int offset) {
     }
 
     return 0;
+}
+
+// append 2 offsets_t* struct
+struct ropit_offsets_t* offsets_append(struct ropit_offsets_t *dest, struct ropit_offsets_t *src) {
+    int idxOff, nElt;
+
+    // check parameters
+    if (!dest || !src) {
+        fprintf(stderr, "error: offsets_append(): dest or src not set\n");
+        return NULL;
+    }
+
+    // destination
+    fprintf(stdout, "info: before: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
+    dest = ropit_offsets_realloc(dest, dest->used + src->used);
+    if (!dest) {
+        fprintf(stderr, "error: offsets_append(): failed allocating enough memory for dest\n");
+        return NULL;
+    }
+    fprintf(stdout, "info: after: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
+    fprintf(stdout, "info: offsets_append(): src->used=%d dest->used=%d\n", src->used, dest->used);
+
+    //
+    for (idxOff = dest->used; idxOff < dest->used + src->used; idxOff++)
+        dest->offsets[idxOff] = src->offsets[idxOff - dest->used];
+    dest->used = dest->used + src->used;
+
+    return dest;
 }

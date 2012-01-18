@@ -41,6 +41,14 @@
 #include "gadgets_internal.h"
 #include "offsets.h"
 
+// internal functions
+// find valid instructions offsets before ret
+struct ropit_offsets_t* _ropit_instructions_find_stub(uint8_t *bytes, int len, struct ropit_offsets_t *rets);
+// allocate gadget cache thread local storage
+struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache);
+// destroy gadget cache thread local storage
+void _gadget_cache_destroy_thread_data(struct gadget_cache_t *gcache);
+
 // allocate new gadget
 struct gadget_t* gadget_new(void) {
     struct gadget_t *gadget;
@@ -230,8 +238,159 @@ struct ropit_offsets_t* ropit_filter_regexp(uint8_t *bytes, int len, char *expr)
     return matches;
 }
 
+struct bytes_t {
+    uint8_t *bytes;
+    int used;
+    int capacity;
+    struct ropit_offsets_t *rets;
+};
+
+// thread for finding instructions before ret
+void* ropit_instructions_find_thread(void *data) {
+    struct bytes_t *bytes = data;
+    struct ropit_offsets_t *offsets, *rets;
+
+    // check parameter
+    if (!bytes)
+        return NULL;
+
+    fprintf(stdout, "info: ropit_instructions_find_thread(): bytes->bytes=%p\n", bytes->bytes);
+    fprintf(stdout, "info: ropit_instructions_find_thread(): bytes->used=%d\n", bytes->used);
+
+    // get rets
+    rets = bytes->rets;
+
+    // find valid instructions
+    offsets = _ropit_instructions_find_stub(bytes->bytes, bytes->used, rets);
+    if (!offsets) {
+        fprintf(stdout, "info: ropit_instructions_find_thread(): no offsets\n");
+        pthread_exit(offsets);
+    }
+
+    fprintf(stdout, "info: ropit_instructions_find_thread(): rets->capacity=%d\n", rets->capacity);
+    fprintf(stdout, "info: ropit_instructions_find_thread(): rets->used=%d\n", rets->used);
+    fprintf(stdout, "info: ropit_instructions_find_thread(): offsets->capacity=%d\n", offsets->capacity);
+    fprintf(stdout, "info: ropit_instructions_find_thread(): offsets->used=%d\n", offsets->used);
+    // offsets = ropit_instructions_find(bytes->bytes, bytes->used);
+
+    // exit
+    pthread_exit(offsets);
+}
+
+// find valid instructions offsets before ret in a threaded way
+struct ropit_offsets_t* ropit_instructions_find_threaded(uint8_t *bytes, int len) {
+    // code return from calls
+    int retcode;
+    // threads
+    int nThreads = 4;
+    int idxThread;
+    pthread_t *threads;
+    // rest and split length
+    int rlen, slen;
+    // offsets
+    struct ropit_offsets_t **local_pointers, **rets, *local_inst;
+    struct bytes_t *tdata;
+
+    // check params
+    if (!bytes || len <= 0) {
+        fprintf(stderr, "error: _ropit_instructions_find_stub(): Bytes null or len <= 0\n");
+        return NULL;
+    }
+
+    // if buffer is not big enough
+    // then no need for threading
+    if (len < nThreads) {
+        fprintf(stdout, "info: _ropit_instructions_find_stub(): Buffer has len than %d bytes so no need for threading\n", nThreads);
+        return _ropit_instructions_find_stub(bytes, len, rets);
+    }
+
+    // allocate threads
+    threads = calloc(nThreads, sizeof(*threads));
+    if (!threads)
+        return NULL;
+
+    // allocate local offsets
+    local_inst = ropit_offsets_new(1024);
+    if (!local_inst)
+        return NULL;
+
+    // allocate local offsets
+    local_pointers = calloc(nThreads, sizeof(*local_pointers));
+    if (!local_pointers)
+        return NULL;
+
+    // allocate local offsets
+    tdata = calloc(nThreads, sizeof(*tdata));
+    if (!tdata)
+        return NULL;
+
+    // search rets
+    rets = calloc(nThreads, sizeof(*rets));
+    if (!rets) {
+        return NULL;
+    }
+
+    // arithmetic to get buffer split length between threads
+    rlen = len % nThreads;
+    slen = (len - rlen) / nThreads;
+
+    // gets rets
+    for (idxThread = 0; idxThread < nThreads - 1; idxThread++) {
+        rets[idxThread] = ropit_opcodes_find_ret(bytes + slen * idxThread, slen);
+    }
+    rets[idxThread] = ropit_opcodes_find_ret(bytes + slen * idxThread, slen + rlen);
+
+    // create threads
+    fprintf(stdout, "Creating threads\n");
+    for (idxThread = 0; idxThread < nThreads; idxThread++) {
+        tdata[idxThread].rets = rets[idxThread];
+        tdata[idxThread].bytes = bytes;
+        tdata[idxThread].capacity = len;
+        tdata[idxThread].used = len;
+
+        // create thead
+        retcode = pthread_create(&threads[idxThread], NULL, ropit_instructions_find_thread, (void *)&(tdata[idxThread]));
+        if (retcode != 0)
+            fprintf(stderr, "error: _ropit_instructions_find_threaded(): thread %d creation failed\n", idxThread);
+    }
+    fprintf(stdout, "Threads created\n");
+
+    // wait for threads completion
+    fprintf(stdout, "Threads joining\n");
+    for (idxThread = 0; idxThread < nThreads; idxThread++) {
+        retcode = pthread_join(threads[idxThread], &(local_pointers[idxThread]));
+        printf("info: _ropit_instructions_find_threaded(): offsets = %p\n", local_pointers[idxThread]);
+        if (retcode != 0)
+            fprintf(stderr, "error: _ropit_instructions_find_threaded(): thread %d did not join\n", idxThread);
+    }
+    fprintf(stdout, "Threads joined\n");
+
+    // aggregate offsets
+    for (idxThread = 0; idxThread < nThreads; idxThread++) {
+        if (offsets_append(local_inst, local_pointers[idxThread]) == NULL) {
+            fprintf(stderr, "error: _ropit_instructions_find_threaded(): Failed appending offsets\n");
+        }
+    }
+
+    // show and free offsets
+    for (idxThread = 0; idxThread < nThreads; idxThread++) {
+        printf("Local pointers of thread %d: %p\n", idxThread, local_pointers[idxThread]);
+        // free instructions
+        ropit_offsets_destroy(&local_pointers[idxThread]);
+    }
+
+    // clean up
+    free(local_pointers);
+    free(threads);
+    free(tdata);
+    for (idxThread = 0; idxThread < nThreads; idxThread++)
+        ropit_offsets_destroy(&rets[idxThread]);
+
+    return local_inst;
+}
+
 // find valid instructions offsets before ret
-struct ropit_offsets_t* ropit_instructions_find(uint8_t *bytes, int len) {
+struct ropit_offsets_t* _ropit_instructions_find_stub(uint8_t *bytes, int len, struct ropit_offsets_t *rets) {
     int size;                /* size of instruction */
     x86_insn_t insn;         /* instruction */
     int idxRet, idxValid;
@@ -249,17 +408,22 @@ struct ropit_offsets_t* ropit_instructions_find(uint8_t *bytes, int len) {
     uint8_t *start;
     // offsets
 
+    // check params
+    if (!bytes || len <= 0) {
+        fprintf(stderr, "error: _ropit_instructions_find_stub(): Bytes null or len <= 0\n");
+        return NULL;
+    }
+
     // search rets
-    struct ropit_offsets_t *rets = ropit_opcodes_find_ret(bytes, len);
     if (!rets) {
-        fprintf(stderr, "Error: No rets\n");
+        fprintf(stderr, "error: _ropit_instructions_find_stub(): No rets\n");
         return NULL;
     }
 
     // allocate
     valid = ropit_offsets_new(len / 8);
     if (!valid) {
-        fprintf(stderr, "ropit_instructions_find(): failed alloc\n");
+        fprintf(stderr, "error: ropit_instructions_find(): failed alloc\n");
         return NULL;
     }
 
@@ -271,14 +435,16 @@ struct ropit_offsets_t* ropit_instructions_find(uint8_t *bytes, int len) {
         start = bytes + currOffset;
         nBacktrackInst = 0;
         nBacktrackBytes = 1;
-        while ( bytes <= start ) {
+        while ( bytes <= start && start <= bytes + len ) {
             /* disassemble address */
             size = x86_disasm(start, start - bytes, 0, 0, &insn);
             if (size) {
                 // check presence of value, if there it's not added
                 for (idxDupe = 0, dupe = 0; idxDupe < idxValid; idxDupe++) {
-                    if (valid->offsets[idxDupe] == start - bytes)
+                    if (valid->offsets[idxDupe] == start - bytes) {
                         dupe = 1;
+                        break;
+                    }
                 }
 
                 // doesn't register offset if already there
@@ -322,13 +488,27 @@ struct ropit_offsets_t* ropit_instructions_find(uint8_t *bytes, int len) {
     qsort (valid->offsets, idxValid, sizeof(int), compare_ints);
     valid = ropit_offsets_realloc(valid, valid->used);
 
-    ropit_offsets_destroy(&rets);
-
     return valid;
 }
 
+// find valid instructions offsets before ret
+struct ropit_offsets_t* ropit_instructions_find(uint8_t *bytes, int len) {
+    struct ropit_offsets_t *rets, *instructions;
+
+    // search rets
+    rets = ropit_opcodes_find_ret(bytes, len);
+    if (!rets) {
+        fprintf(stderr, "error: ropit_instructions_find(): No rets\n");
+        return NULL;
+    }
+    instructions = _ropit_instructions_find_stub(bytes, len, rets);
+    ropit_offsets_destroy(&rets);
+
+    return instructions;
+}
+
 int ropit_pointers_check_charset(uint64_t pointer,
-                                 char *charset, int szCharset) {
+        char *charset, int szCharset) {
     int idxCharset, idxPtr;
     uint8_t p[8] = {0};
     int isGood = 0;
@@ -380,7 +560,9 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     // instruction str buffer
     char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
     int disasLength;
+    char *addrRet;
     char gadgetline[GADGET_SIZE_MAX] =  {0};
+    int lenGadgetLine;
     // gadget cache: once the cache is full we write it to file
     struct gadget_cache_t *gcache, *gcache_thread;
     struct gadget_t *gadget, *cached;
@@ -403,7 +585,8 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     if (!fp_cache)
         return NULL;
 
-    instructions = ropit_instructions_find(bytes, len);
+    // get instructions
+    instructions = ropit_instructions_find_threaded(bytes, len);
     if (!instructions)
         return NULL;
 
@@ -416,7 +599,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
     // create local thread storage
     gcache_thread = _gadget_cache_new_thread_data(gcache);
     if (!gcache_thread) {
-        fprintf(stderr, "cache copy failed\n");
+        fprintf(stderr, "error: ropit_gadgets_find(): cache copy failed\n");
         return ERR_GADGET_CACHE_UNDEFINED;
     }
 
@@ -449,6 +632,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
         // gadget index
         idxGadget = gadget_cache_get_size(gcache) > 0 ? gadget_cache_get_size(gcache) - 1 : 0;
         // get gadgets
+        addrRet = NULL;
         do {
             /* disassemble address */
             size = x86_disasm(bytes, len, 0, pos, &insn);
@@ -458,8 +642,6 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
 
                 // filter out bad instructions
                 if (ropit_instructions_check(disassembled, DISASSEMBLED_SIZE_MAX) == 0)
-                    break;
-                if (strstr(gadgetline, "ret") || strstr(gadgetline, "jmp"))
                     break;
                 if (nInstructions >= 8)
                     break;
@@ -477,17 +659,21 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
                 gadgetline[GADGET_SIZE_MAX-1] = '\0';
 #endif
 
+                addrRet = strstr(disassembled, "ret");
+                if (addrRet)
+                    break;
                 // go forward
                 pos += size;
                 nInstructions++;
             }
         } while (size);
 
-        if (!strstr(gadgetline, "ret"))
+        if (addrRet == NULL)
             memset(gadgetline, 0, GADGET_SIZE_MAX);
 
         // if gadget found
-        if (strlen(gadgetline) && nInstructions) {
+        lenGadgetLine = strlen(gadgetline);
+        if (lenGadgetLine && nInstructions) {
             // replace tabulations by spaces
             str_tabs2spaces(gadgetline, GADGET_SIZE_MAX);
 
@@ -495,7 +681,7 @@ struct ropit_gadget_t* ropit_gadgets_find(uint8_t *bytes, int len, uint64_t base
             gadgets[idxGadget].address = startpos;
             strncpy(gadgets[idxGadget].repr, gadgetline, gadgets[idxGadget].szRepr-1);
             gadgets[idxGadget].lenBytes = 0;
-            gadgets[idxGadget].lenRepr = strlen(gadgets[idxGadget].repr);
+            gadgets[idxGadget].lenRepr = lenGadgetLine;
 
             // reset gadgetline
             memset(gadgetline, 0, GADGET_SIZE_MAX);
@@ -556,26 +742,26 @@ struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename) {
 
     elffile = ElfLoad(filename);
     if (!elffile) {
-        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed loading ELF\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_elf(): Failed loading ELF\n");
         return NULL;
     }
 
     if (ElfCheckArchitecture (elffile) == 0) {
-        fprintf(stderr, "ropit_gadgets_find_in_elf(): Architecture not supported\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_elf(): Architecture not supported\n");
         ElfUnload(&elffile);
         return NULL;
     }
 
     elfHeader = ElfGetHeader(elffile);
     if (!elfHeader) {
-        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting elfHeaders\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_elf(): Failed getting elfHeaders\n");
         return NULL;
     }
 
     // program segments parsing (sections are part of program segments)
     programHeadersTable = ElfGetProgramHeadersTable (elffile);
     if (!programHeadersTable) {
-        fprintf(stderr, "ropit_gadgets_find_in_elf(): Failed getting Program Headers Table\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_elf(): Failed getting Program Headers Table\n");
     }
     else {
         for (idxProgramSegment = 0; idxProgramSegment < elfHeader->e_phnum; idxProgramSegment++) {
@@ -601,24 +787,24 @@ struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename) {
 
     pefile = PeLoad(filename);
     if (!pefile) {
-        fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed loading PE\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_pe(): Failed loading PE\n");
         return NULL;
     }
 
     if (PeCheckArchitecture (pefile) == 0) {
-        fprintf(stderr, "ropit_gadgets_find_in_pe(): Architecture not supported\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_pe(): Architecture not supported\n");
         PeUnload(&pefile);
         return NULL;
     }
 
     ntHeader = PeGetNtHeader(pefile);
     if (!ntHeader) {
-        fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed getting NtHeaders\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_pe(): Failed getting NtHeaders\n");
         return NULL;
     }
     sectionHeadersTable = PeGetSectionHeaderTable(pefile);
     if (!sectionHeadersTable) {
-        fprintf(stderr, "ropit_gadgets_find_in_pe(): Failed getting Section Headers Table\n");
+        fprintf(stderr, "error: ropit_gadgets_find_in_pe(): Failed getting Section Headers Table\n");
         return NULL;
     }
 
