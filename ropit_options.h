@@ -6,11 +6,25 @@ void usage(char *program);
 // parse options and trigger actions
 void parse_options (int argc, char *argv[]);
 
+struct ropit_options_t {
+    char *filename_input;
+    char *filename_output;
+    int filetype;
+    int verbose_level;
+    int color;
+    int threads;
+};
+
+struct ropit_options_t ropit_options;
+
 #define ROPIT_OPTION_FILE_IN        0
 #define ROPIT_OPTION_FILE_OUT       1
 #define ROPIT_OPTION_FILE_TYPE      2
 #define ROPIT_OPTION_OUTPUT_TYPE    3
+#define ROPIT_OPTION_VERBOSE_LEVEL  4
+#define ROPIT_OPTION_COLOR          5
+#define ROPIT_OPTION_THREADS        6
 
-#define NUMBER_OF_OPTIONS           4
+#define NUMBER_OF_OPTIONS           7
 
 #endif /* _ROPIT_OPTIONS_H_ */

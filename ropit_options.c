@@ -6,6 +6,20 @@
 
 // input file
 int ropit_option_file_input (int random) {
+    fprintf(stderr, "error: Function not yet implemented\n");
+    return -1;
+}
+
+// output file
+int ropit_option_file_output (int random) {
+    fprintf(stderr, "error: Function not yet implemented\n");
+    return -1;
+}
+
+// file type
+int ropit_option_file_type (int random) {
+    fprintf(stderr, "error: Function not yet implemented\n");
+    return -1;
 }
 
 // show how to use ROPit
@@ -30,13 +44,14 @@ void parse_options (int argc, char *argv[]) {
         { "file-out", no_argument, NULL, ROPIT_OPTION_FILE_OUT },
         { "file-type", required_argument, NULL, ROPIT_OPTION_FILE_TYPE },
         { "output-type", required_argument, NULL, ROPIT_OPTION_OUTPUT_TYPE },
+        { "threads", required_argument, NULL, ROPIT_OPTION_THREADS },
+        { "color", no_argument, NULL, ROPIT_OPTION_COLOR },
+        { "verbose", no_argument, NULL, 'v' },
         { 0, 0, 0, 0 }
     };
 
-    while (1) {
-        option_id = getopt_long (argc, argv, NULL, long_options, &option_index);
-        if (option_id == -1)
-            break;
+    while (option_id >= 0) {
+        option_id = getopt_long (argc, argv, "v", long_options, &option_index);
 
         switch (option_id) {
             case ROPIT_OPTION_FILE_IN:
@@ -48,6 +63,33 @@ void parse_options (int argc, char *argv[]) {
             case ROPIT_OPTION_FILE_TYPE:
                 flag[ROPIT_OPTION_FILE_TYPE] = 1;
                 break;
+            case ROPIT_OPTION_OUTPUT_TYPE:
+                flag[ROPIT_OPTION_OUTPUT_TYPE] = 1;
+                break;
+            case ROPIT_OPTION_COLOR:
+                flag[ROPIT_OPTION_COLOR] = 1;
+                break;
+            case 'v':
+                flag[ROPIT_OPTION_VERBOSE_LEVEL]++;
+                break;
+            default:
+                break;
         }
     }
+
+    if (flag[ROPIT_OPTION_FILE_IN] != 1) {
+        fprintf(stderr, "file-in not defined\n");
+        exit(-1);
+    }
+
+    if (flag[ROPIT_OPTION_FILE_OUT] != 1) {
+    }
+    else {
+    }
+
+    if (flag[ROPIT_OPTION_FILE_TYPE] != 1) {
+    }
+    else {
+    }
 }
+

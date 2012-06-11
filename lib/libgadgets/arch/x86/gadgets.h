@@ -7,7 +7,7 @@
 #include "offsets.h"
 
 // search rets
-struct ropit_offsets_t* ropit_opcodes_find_ret(uint8_t *bytes, int len);
+struct offsets_t* ropit_opcodes_find_ret(uint8_t *bytes, int len);
 // check if inst is good
 int ropit_instructions_check (char *inst, int len);
 

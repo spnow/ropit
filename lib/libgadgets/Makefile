@@ -2,7 +2,7 @@ INCDIR = ..
 HEADERS = -I$(INCDIR)/libbparse/src -I$(INCDIR)/libfile-rop -I.
 
 CC	=	gcc
-CFLAGS	=	-g -O2 -Wall -W
+CFLAGS	=	-g -O0 -Wall -W
 LDFLAGS = -ldisasm -lpcre -lpthread -D_REENTRANT
 
 define compile_rule
@@ -13,10 +13,10 @@ define link_rule
 endef
 
 # x86 related code
-ARCH_OBJS = arch/x86/gadgets_x86.lo
+ARCH_OBJS = arch/x86/gadgets.lo
 # library
 LIB_NAME = libgadgets.la
-LIB_OBJS = gadgets.lo string_extended.lo offsets.lo gadgets_cache.lo ../libfile-rop/byte-order.lo gadgets_x86.lo
+LIB_OBJS = gadgets.lo gadgets_find.lo string_extended.lo offsets.lo gadgets_cache.lo ../libfile-rop/byte-order.lo arch/x86/gadgets.lo
 
 %.lo: %.c
 	$(call compile_rule)
@@ -24,8 +24,8 @@ LIB_OBJS = gadgets.lo string_extended.lo offsets.lo gadgets_cache.lo ../libfile-
 $(LIB_NAME): $(LIB_OBJS)
 	$(call link_rule)
 
-%.lo: arch/x86/%.c
-	$(call compile_rule)
+arch/x86/gadgets.lo: arch/x86/gadgets.c
+	libtool --mode=compile $(CC) $(CFLAGS) $(HEADERS) $(CPPFLAGS) -c $< -o arch/x86/gadgets.o
 
 .PHONY: clean mrproper
 

@@ -19,7 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "gadgets.h"
+#include "gadgets_find.h"
 #include "file_pe.h"
 #include "file_elf.h"
 #include "ropit_options.h"
@@ -46,14 +46,15 @@ int main (int argc, char *argv[]) {
     }
 
     if (ElfCheck(fp_file) || PeCheck(fp_file))
-        ropit_gadgets_find_in_executable(argv[1]);
+        gadgets_find_in_executable(argv[1]);
     else
-        ropit_gadgets_find_in_file(argv[1]);
+        gadgets_find_in_file(argv[1]);
+    fclose(fp_file);
 
-    printf("showing gadgets in cache\n");
     fp_cache = fopen("tmp/gadget_cache", "rb");
     if (!fp_cache)
-        goto ropit_cleanup;
+        return -1;
+    printf("showing gadgets in cache\n");
     countGadgets = gadget_cache_fshow(fp_cache);
 #ifdef PRINT_IN_COLOR
     printf("\n== SUMMARY ==\n");
@@ -67,10 +68,6 @@ int main (int argc, char *argv[]) {
 #endif
     printf("Found %d gadgets\n", countGadgets);
 
-
-    // clean up
-ropit_cleanup:
-    fclose(fp_file);
     fclose(fp_cache);
 
     return 0;

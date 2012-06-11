@@ -6,8 +6,7 @@
 #include <libdis.h>
 
 #include "offsets.h"
-#include "gadgets_x86.h"
-#include "../arch.h"
+#include "gadgets.h"
 
 static const char * jcc_insns[] = {
         "ja", "jae", "jb", "jbe", "jc", "jcxz", "jecxz", 
@@ -28,14 +27,14 @@ int gadgets_x86_init (void) {
 }
 
 // search rets
-struct ropit_offsets_t* ropit_opcodes_find_ret(uint8_t *bytes, int len) {
+struct offsets_t* ropit_opcodes_find_ret(uint8_t *bytes, int len) {
     uint8_t opcodes[] = "\xc3\xc2\xca\xcb\xcf";
-    struct ropit_offsets_t *rets = ropit_opcodes_find(bytes, len, opcodes, strlen((char*)opcodes), 1);
+    struct offsets_t *rets = ropit_opcodes_find(bytes, len, opcodes, strlen((char*)opcodes), 1);
 
     return rets;
 }
 
-struct ropit_offsets_t* ropit_filter_ppr(uint8_t *bytes, int len) {
+struct offsets_t* ropit_filter_ppr(uint8_t *bytes, int len) {
     return ropit_filter_regexp(bytes, len, "(pop\\s+\\w{3}\\s+){2}\\s*ret");
 }
 
@@ -115,13 +114,14 @@ char* ropit_listing_disasm (uint8_t *bytes, int len) {
     return listing;
 }
 
-char* ropit_instructions_show (uint8_t *bytes, int len) {
-    int size;                /* size of instruction */
-    x86_insn_t insn;         /* instruction */
+//char* ropit_instructions_show (uint8_t *bytes, int len) {
+//    int size;                /* size of instruction */
+//    x86_insn_t insn;         /* instruction */
+/*
     char line[4096] = {0};
     int linelen = 4096;
     int idx;
-    struct ropit_offsets_t *instructions;
+    struct offsets_t *instructions;
 
     instructions = ropit_instructions_find(bytes, len);
     if (!instructions)
@@ -142,8 +142,8 @@ char* ropit_instructions_show (uint8_t *bytes, int len) {
     }
     x86_cleanup();
 
-    ropit_offsets_destroy(&instructions);
+    offsets_destroy(&instructions);
 
     return NULL;
 }
-
+*/

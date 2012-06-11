@@ -39,10 +39,8 @@ struct gadget_cache_thread_data_t {
     // find rets -> find for instructions -> find gadgets
     pthread_mutex_t find_inst_mutex;
 
-    // number of gadget threads
-    int nGadgetsThreads;
     // threads for finding gadgets
-    pthread_t *gadgets_threads;
+    pthread_t *gadgets_thread;
     // semaphore for thread_cache access
     sem_t *cache_sem;
 
@@ -62,6 +60,7 @@ struct gadget_cache_data_t {
 struct gadget_ncache_t {
     // file
     FILE *fp;
+    int nthreads;
 
     // cache
     struct gadget_cache_data_t *cache;

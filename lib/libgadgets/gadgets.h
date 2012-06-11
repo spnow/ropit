@@ -36,8 +36,8 @@
 
 // one gadget
 struct gadget_t {
-    // address of gadget
     uint64_t address;
+    int32_t type;
     // binary repr
     int16_t lenBytes;
     int16_t szBytes;
@@ -56,22 +56,7 @@ struct gadget_t* gadget_new_copy(struct gadget_t *gadget);
 void gadget_destroy(struct gadget_t **gadget);
 // copy a gadget to another one
 struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src);
-
-// generic callback
-struct gadget_callbacks_t {
-    // find branching instructions
-    struct offset_t* (*find_branches)(uint8_t *bytes, int nBytes);
-    // find gadgets
-    struct offset_t* (*find_gadgets)(uint8_t *bytes, int nBytes);
-};
-
-// find gadgets in ELF file
-struct ropit_gadget_t* ropit_gadgets_find_in_elf(char *filename);
-// find gadgets in PE file
-struct ropit_gadget_t* ropit_gadgets_find_in_pe(char *filename);
-// find gadgets in executable file
-struct ropit_gadget_t* ropit_gadgets_find_in_executable(char *filename);
-// find gadgets in file
-struct ropit_gadget_t* ropit_gadgets_find_in_file(char *filename);
+// get address of gadget
+uint64_t gadget_get_address(struct gadget_t *gadget);
 
 #endif /* _GADGETS_H_ */

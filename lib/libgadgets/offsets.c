@@ -3,8 +3,8 @@
 
 #include "offsets.h"
 
-struct ropit_offsets_t* ropit_offsets_new(int nElt) {
-    struct ropit_offsets_t *match = calloc(1, sizeof(*match));
+struct offsets_t* offsets_new(int nElt) {
+    struct offsets_t *match = calloc(1, sizeof(*match));
 
     if (!match)
         return NULL;
@@ -17,7 +17,7 @@ struct ropit_offsets_t* ropit_offsets_new(int nElt) {
     return match;
 }
 
-struct ropit_offsets_t* ropit_offsets_realloc(struct ropit_offsets_t *ropmatch, int nElt) {
+struct offsets_t* offsets_realloc(struct offsets_t *ropmatch, int nElt) {
     if (!ropmatch || nElt <= 0)
         return NULL;
 
@@ -30,7 +30,7 @@ struct ropit_offsets_t* ropit_offsets_realloc(struct ropit_offsets_t *ropmatch, 
     return ropmatch;
 }
 
-void ropit_offsets_destroy(struct ropit_offsets_t **match) {
+void offsets_destroy(struct offsets_t **match) {
     if (!match)
         return;
     if (!*match)
@@ -41,7 +41,7 @@ void ropit_offsets_destroy(struct ropit_offsets_t **match) {
     *match = NULL;
 }
 
-int ropit_offsets_exist(struct ropit_offsets_t *array, int offset) {
+int offsets_exist(struct offsets_t *array, int offset) {
     int idx;
 
     if (!array)
@@ -53,11 +53,11 @@ int ropit_offsets_exist(struct ropit_offsets_t *array, int offset) {
         }
     }
 
-    return 0;
+    return -1;
 }
 
 // append 2 offsets_t* struct
-struct ropit_offsets_t* offsets_append(struct ropit_offsets_t *dest, struct ropit_offsets_t *src) {
+struct offsets_t* offsets_append(struct offsets_t *dest, struct offsets_t *src) {
     int idxOff, nElt;
 
     // check parameters
@@ -68,7 +68,7 @@ struct ropit_offsets_t* offsets_append(struct ropit_offsets_t *dest, struct ropi
 
     // destination
     fprintf(stdout, "info: before: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
-    dest = ropit_offsets_realloc(dest, dest->used + src->used);
+    dest = offsets_realloc(dest, dest->used + src->used);
     if (!dest) {
         fprintf(stderr, "error: offsets_append(): failed allocating enough memory for dest\n");
         return NULL;

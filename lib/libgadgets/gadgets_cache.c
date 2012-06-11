@@ -5,8 +5,8 @@
 #include <pthread.h>
 #include <semaphore.h>
 
-#include "arch/arch.h"
 #include "byte-order.h"
+#include "gadgets.h"
 #include "gadgets_cache.h"
 
 /* thread cache */
@@ -14,6 +14,7 @@
 struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache);
 // destroy gadget cache thread local storage
 void _gadget_cache_destroy_thread_data(struct gadget_cache_t *cache);
+struct gadget_cache_t* _gadget_cache_new(int nGadget);
 
 // fwrite thread callback
 void *gadget_cache_fwrite_thread(void *data);
@@ -95,7 +96,7 @@ void _gadget_cache_destroy_thread_data(struct gadget_cache_t *gcache) {
     fprintf(stderr, "_gadget_cache_destroy_thread_data(): warning: Destroying thread local cache\n");
 
     // trigger thread exit
-    thread_lcache->state = GADGET_CACHE_STATE_END;
+    //thread_lcache->state = GADGET_CACHE_STATE_END;
     sem_post(&thread_lcache->fwrite_sem);
 
     // unlock it (avoid deadlock)
@@ -110,13 +111,33 @@ void _gadget_cache_destroy_thread_data(struct gadget_cache_t *gcache) {
     sem_destroy(&thread_lcache->fwrite_sem);
 
     // destroy cache
-    gadget_cache_destroy(&gcache->thread_cache);
+    _gadget_cache_destroy(&gcache->thread_cache);
 }
 
 /* cache structure */
 
 // allocate cache
 struct gadget_cache_t* gadget_cache_new(int nGadget) {
+    struct gadget_cache_t *cache;
+
+    if (nGadget <= 0)
+        return NULL;
+
+    cache = _gadget_cache_new(nGadget);
+    if (!cache)
+        return NULL;
+
+    // create local thread storage
+    cache->thread_cache = _gadget_cache_new_thread_data(cache);
+    if (!cache->thread_cache) {
+        fprintf(stderr, "error: gadget_cache_new(): cache copy failed\n");
+        return ERR_GADGET_CACHE_UNDEFINED;
+    }
+
+    return cache;
+}
+
+struct gadget_cache_t* _gadget_cache_new(int nGadget) {
     struct gadget_cache_t *cache;
 
     if (nGadget <= 0)
@@ -142,7 +163,7 @@ struct gadget_cache_t* gadget_cache_new_copy(struct gadget_cache_t *cache) {
     struct gadget_cache_t *copy, *res;
 
     // allocate copy
-    copy = gadget_cache_new(gadget_cache_get_capacity(cache));
+    copy = _gadget_cache_new(gadget_cache_get_capacity(cache));
     // make copy
     res = gadget_cache_copy(copy, cache);
     if (res == NULL)
@@ -152,15 +173,29 @@ struct gadget_cache_t* gadget_cache_new_copy(struct gadget_cache_t *cache) {
 }
 
 // destroy cache
+void _gadget_cache_destroy(struct gadget_cache_t **cache) {
+    // check parameters
+    if (!cache || !*cache)
+        return;
+
+    // destroy gadget cache
+    gadget_cache_purge(*cache);
+    free((*cache)->gadgets);
+    free(*cache);
+    *cache = NULL;
+}
+
+// destroy cache
 void gadget_cache_destroy(struct gadget_cache_t **cache) {
     // check parameters
     if (!cache || !*cache)
         return;
 
-    gadget_cache_purge(*cache);
-    free((*cache)->gadgets);
-    free(*cache);
-    *cache = NULL;
+    // destroy thread local cache
+    _gadget_cache_destroy_thread_data(cache);
+
+    // destroy cache
+    _gadget_cache_destroy(cache);
 }
 
 // gadget cache copy (both cache must have the same size)
@@ -170,7 +205,7 @@ struct gadget_cache_t* gadget_cache_copy(struct gadget_cache_t *dest, struct gad
     struct gadget_t *copied, *cached;
 
     // check parameters
-    if (!dest || !src) {
+    if ((!dest || !src) && src == dest) {
         fprintf(stderr, "error: gadget_cache_copy(): Bad parameters\n");
         return NULL;
     }
@@ -700,7 +735,7 @@ int gadget_cache_fshow(FILE *fp) {
             break;
     }
 
-    gadget_cache_destroy(&cache);
+    // gadget_cache_destroy(&cache);
 
     return countGadgets;
 }
