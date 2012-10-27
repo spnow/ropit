@@ -27,12 +27,13 @@ include_directories("${PROJECT_SOURCE_DIR}/inc")
 add_library(
     libgadgets
     STATIC
-    gadgets.c
-    gadgets_cache.c
-    gadgets_find.c
-    offsets.c
+    src/gadgets.c
+    src/gadgets_cache.c
+    src/gadgets_find.c
+    src/offsets.c
     )
 target_link_libraries (libgadgets
     gcov
+    fall4c
     )
 
