@@ -20,7 +20,7 @@ int ropit_file_gadget_update(FILE *fp, uint8_t *bytes, int nBytes) {
     section = NULL;
 
     // get gadget section header
-    for (idxSHeader = 0; idxSHeader < metadata->nSections; idxSHeader++) {
+    for (idxSHeader = 0; idxSHeader < metadata->n_sections; idxSHeader++) {
         if (sheaders[idxSHeader].type = ROPIT_FILE_SECTION_TYPE_GADGET)
             section = &(sheaders[idxSHeader]);
     }

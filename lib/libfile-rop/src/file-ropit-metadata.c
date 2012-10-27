@@ -77,17 +77,17 @@ struct ropit_file_metadata_t* ropit_file_metadata_read(FILE *fp) {
     nRead = fread(metadata->filename, sizeof(uint8_t), metadata->szFilename, fp);
 
     // get number of sections
-    nRead = fread(&(metadata->nSections), sizeof(uint16_t), 1, fp);
-    metadata->nSections = file_to_host_order(metadata->nSections);
+    nRead = fread(&(metadata->n_sections), sizeof(uint16_t), 1, fp);
+    metadata->n_sections = file_to_host_order(metadata->n_sections);
 
     // get section headers table
-    metadata->sheaders = calloc(sizeof(*(metadata->sheaders)), metadata->nSections);
+    metadata->sheaders = calloc(sizeof(*(metadata->sheaders)), metadata->n_sections);
     if (!metadata->sheaders)
         goto _error;
-    nRead = fread(metadata->sheaders, sizeof(uint8_t), metadata->nSections, fp);
+    nRead = fread(metadata->sheaders, sizeof(uint8_t), metadata->n_sections, fp);
 
     // fix endianness
-    for (idxSection = 0; idxSection < metadata->nSections; idxSection++) {
+    for (idxSection = 0; idxSection < metadata->n_sections; idxSection++) {
         metadata->sheaders[idxSection].type = file_to_host_order(metadata->sheaders[idxSection].type);
         metadata->sheaders[idxSection].nElt = file_to_host_order(metadata->sheaders[idxSection].nElt);
     }

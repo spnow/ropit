@@ -27,7 +27,7 @@ struct ropit_file_metadata_t {
     uint16_t szFilename;
     uint8_t *filename;
     // number of sections
-    uint16_t nSections;
+    uint16_t n_sections;
     struct ropit_file_section_header_t *sheaders;
 };
 
