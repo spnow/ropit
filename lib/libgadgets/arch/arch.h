@@ -15,16 +15,27 @@ struct offsets_t* ropit_opcodes_find(uint8_t *bytes, int szBytes,
 // find valid instructions offsets before ret
 struct offsets_t* ropit_instructions_find(uint8_t *bytes, int len);
 
+extern struct gadget_plugin_t *current_gadget_plugin;
+
 struct gadget_plugin_t {
+    // attributes
 	char *name;
 	char *arch;
 	char *desc;
-	int (*init)(void *user);
-	int (*fini)(void *user);
-    char (*find_gadgets) (uint8_t *buf, int len);
-    char (*find_rets) (uint8_t *buf, int len);
-    char (*find_branches) (uint8_t *buf, int len);
+    //
+    char *rets;
+    int n_rets;
+
+    // methods
+	int (*init)(void);
+	int (*fini)(void);
+    int (*find_gadgets) (uint8_t *buf, int len);
+    struct offsets_t *(*find_rets) (uint8_t *buf, int len);
+    struct offsets_t *(*find_branches) (uint8_t *buf, int len);
 };
+
+struct gadget_plugin_t *gadget_plugin_new_copy (struct gadget_plugin_t *plugin);
+int gadget_plugin_destroy (struct gadget_plugin_t **plugin);
 
 #include "x86/gadgets.h"
 
