@@ -39,12 +39,12 @@ struct gadget_t {
     uint64_t address;
     int32_t type;
     // binary repr
-    int16_t lenBytes;
-    int16_t szBytes;
+    int16_t len_bytes;
+    int16_t sz_bytes;
     uint8_t *bytes;
     // disassembled repr
-    int16_t lenRepr;
-    int16_t szRepr;
+    int16_t len_repr;
+    int16_t sz_repr;
     uint8_t *repr;
 };
 

@@ -10,7 +10,7 @@
 #include <pcre.h>
 
 #include "arch/arch.h"
-#include "filemap.h"
+#include <fall4c/filemap.h>
 #include "file_pe.h"
 #include "file_elf.h"
 #include "offsets.h"

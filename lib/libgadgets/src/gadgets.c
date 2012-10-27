@@ -24,10 +24,6 @@
 #include <ctype.h>
 #include <elf.h>
 
-#include "byte-order.h"
-#include "file_elf.h"
-#include "file_pe.h"
-
 #define BUF_SIZE    1024
 #define LINE_SIZE   1024
 
@@ -58,8 +54,8 @@ struct gadget_t* gadget_new_copy(struct gadget_t *gadget) {
         fprintf(stderr, "error: gadget_new_copy(): copy was not allocated\n");
         return NULL;
     }
-    copy->repr = calloc(gadget->szRepr, sizeof(*copy->repr));
-    copy->bytes = calloc(gadget->szBytes, sizeof(*copy->bytes));
+    copy->repr = calloc(gadget->sz_repr, sizeof(*copy->repr));
+    copy->bytes = calloc(gadget->sz_bytes, sizeof(*copy->bytes));
 
     // if one of the alloc failed
     // then copied object failed
@@ -107,14 +103,14 @@ struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     }
 
     // 
-    if (dest->szBytes != src->szBytes) {
+    if (dest->sz_bytes != src->sz_bytes) {
         fprintf(stderr, "warning: gadget_copy(): realloc of dest->bytes\n");
-        dest->bytes = realloc(dest->bytes, src->szBytes * sizeof(*dest->bytes));
+        dest->bytes = realloc(dest->bytes, src->sz_bytes * sizeof(*dest->bytes));
     }
     // 
-    if (dest->szRepr != src->szRepr) {
+    if (dest->sz_repr != src->sz_repr) {
         fprintf(stderr, "warning: gadget_copy(): realloc of dest->repr\n");
-        dest->repr = realloc(dest->repr, src->szRepr * sizeof(*dest->repr));
+        dest->repr = realloc(dest->repr, src->sz_repr * sizeof(*dest->repr));
     }
 
     // check
@@ -124,14 +120,14 @@ struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     }
 
     dest->address = src->address;
-    dest->lenBytes = src->lenBytes;
-    dest->szBytes = src->szBytes;
-    dest->lenRepr = src->lenRepr;
-    dest->szRepr = src->szRepr;
+    dest->len_bytes = src->len_bytes;
+    dest->sz_bytes = src->sz_bytes;
+    dest->len_repr = src->len_repr;
+    dest->sz_repr = src->sz_repr;
 
     // copy repr and bytes
-    memcpy(dest->bytes, src->bytes, src->lenBytes);
-    memcpy(dest->repr, src->repr, src->lenRepr);
+    memcpy(dest->bytes, src->bytes, src->len_bytes);
+    memcpy(dest->repr, src->repr, src->len_repr);
 
     return dest;
 }
