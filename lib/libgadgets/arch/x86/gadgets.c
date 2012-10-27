@@ -67,16 +67,16 @@ int ropit_instructions_check (char *inst, int len) {
         "set", "sto",
         NULL
     };
-    int idxGood;
+    int idx_good;
 
     if (!inst)
         return 0;
 
-    idxGood = 0;
-    while (good[idxGood] != NULL) {
-        if (strstr(inst, good[idxGood]))
+    idx_good = 0;
+    while (good[idx_good] != NULL) {
+        if (strstr(inst, good[idx_good]))
             return 1;
-        idxGood++;
+        idx_good++;
     }
 
     return 0;

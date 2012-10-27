@@ -27,7 +27,6 @@
 #include "byte-order.h"
 #include "file_elf.h"
 #include "file_pe.h"
-#include "string_extended.h"
 
 #define BUF_SIZE    1024
 #define LINE_SIZE   1024
@@ -101,18 +100,6 @@ struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
         return NULL;
     }
 
-    //
-    if (src->bytes == dest->bytes) {
-        fprintf(stderr, "error: gadget_copy(): src->bytes and dest->bytes are equals\n");
-        return NULL;
-    }
-
-    //
-    if (src->repr == dest->repr) {
-        fprintf(stderr, "error: gadget_copy(): src->repr and dest->repr are equals\n");
-        return NULL;
-    }
-
     // check src
     if (!src->bytes || !src->repr) {
         fprintf(stderr, "error: gadget_copy(): src has no elements\n");
@@ -147,10 +134,5 @@ struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     memcpy(dest->repr, src->repr, src->lenRepr);
 
     return dest;
-}
-
-// get address of gadget
-uint64_t gadget_get_address(struct gadget_t *gadget) {
-    return gadget->address;
 }
 

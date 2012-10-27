@@ -17,50 +17,50 @@
 
 // internal functions
 // find valid instructions offsets before ret
-struct offsets_t* _gadgets_find_stub(uint8_t *bytes, int len, int *rets, int nRets);
+struct offsets_t *_gadgets_find_stub(uint8_t *bytes, int len, int64_t *rets, int n_rets);
 
 int compare_ints (const void * a, const void * b) {
     return ( *(int*)a - *(int*)b );
 }
 
 // search some opcodes
-struct offsets_t* ropit_opcodes_find(uint8_t *bytes, int szBytes,
-        uint8_t *opcodes, int szOps, int szOpcode) {
+struct offsets_t *ropit_opcodes_find(uint8_t *bytes, int sz_bytes,
+        uint8_t *opcodes, int sz_ops, int sz_opcode) {
     //
-    int idxBytes, nOps;
+    int idx_bytes, n_ops;
     //
-    int idxOp;
+    int idx_op;
     struct offsets_t *ops = NULL;
 
-    if (!bytes || szBytes <= 0
-            || !opcodes || szOps <= 0
-            || szOpcode <= 0)
+    if (!bytes || sz_bytes <= 0
+            || !opcodes || sz_ops <= 0
+            || sz_opcode <= 0)
         return NULL;
 
     // alloc
-    ops = offsets_new(szBytes);
+    ops = offsets_new(sz_bytes);
     if (!ops)
         return NULL;
 
     // find offsets
-    for (idxBytes = 0, nOps = 0; idxBytes < szBytes; idxBytes++) {
-        for (idxOp = 0; idxOp < szOps; idxOp++) {
-            if (bytes[idxBytes] == opcodes[idxOp]) {
-                ops->offsets[nOps] = idxBytes;
-                nOps++;
+    for (idx_bytes = 0, n_ops = 0; idx_bytes < sz_bytes; idx_bytes++) {
+        for (idx_op = 0; idx_op < sz_ops; idx_op++) {
+            if (bytes[idx_bytes] == opcodes[idx_op]) {
+                ops->offsets[n_ops] = idx_bytes;
+                n_ops++;
             }
         }
     }
 
-    qsort (ops->offsets, nOps, sizeof(int), compare_ints);
+    qsort (ops->offsets, n_ops, sizeof(int), compare_ints);
 
-    ops->used = nOps;
+    ops->used = n_ops;
 
     return ops;
 }
 
 //
-struct offsets_t* ropit_filter_regexp(uint8_t *bytes, int len, char *expr) {
+struct offsets_t *ropit_filter_regexp(uint8_t *bytes, int len, char *expr) {
     pcre *pattern = NULL;
     const char *errptr = NULL;
     int erroffset = 0;
@@ -105,6 +105,31 @@ struct offsets_t* ropit_filter_regexp(uint8_t *bytes, int len, char *expr) {
     return matches;
 }
 
+struct _gadget_find_thread_data {
+    uint8_t *bytes;
+    int len;
+    uint64_t *rets;
+    int sz_rets;
+};
+
+void* gadgets_find_thread_n(void *data) {
+    struct _gadget_find_thread_data *tdata = data;
+    struct offsets_t *rets;
+    struct offsets_t *gadgets;
+
+    if (!data)
+        return NULL;
+
+    rets = tdata->rets;
+    if (!rets)
+        return NULL;
+    gadgets = _gadgets_find_stub(tdata->bytes, tdata->len, rets->offsets, rets->used);
+    if (!gadgets)
+        return NULL;
+
+    pthread_exit(gadgets);
+}
+
 struct bytes_t {
     uint8_t *bytes;
     int used;
@@ -145,12 +170,100 @@ void* gadgets_find_thread(void *data) {
 }
 
 // find valid instructions offsets before ret in a threaded way
-struct offsets_t* gadgets_find_threaded(uint8_t *bytes, int len) {
+struct offsets_t *gadgets_find_threaded_n(uint8_t *bytes, int len) {
     // code return from calls
     int retcode;
     // threads
-    int nThreads = 4;
-    int idxThread;
+    int n_threads = 4;
+    int idx_thread;
+    pthread_t *threads;
+    struct _gadget_find_thread_data *tdata;
+    struct offsets_t **tresult;
+    int rest, rlen, tlen;
+    // gadgets finding
+    struct offsets_t *gadgets;
+
+    // check params
+    if (!bytes || len <= 0) {
+        fprintf(stderr, "error: _gadgets_find_threaded_n(): Bytes null or len <= 0\n");
+        return NULL;
+    }
+
+    tdata = calloc(n_threads, sizeof(*tdata));
+    if (!tdata) {
+        fprintf(stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc tdata\n");
+        return NULL;
+    }
+
+    tresult = calloc(n_threads, sizeof(*tresult));
+    if (!tresult) {
+        fprintf(stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc tresult\n");
+        return NULL;
+    }
+    
+    // allocate threads
+    threads = calloc(n_threads, sizeof(*threads));
+    if (!threads) {
+        fprintf(stderr, "error: _gadgets_find_threaded_n(): Could alloc threads\n");
+        return NULL;
+    }
+
+    rest = len % n_threads;
+    rlen = len - rest;
+    tlen = len / n_threads;
+
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        tdata[idx_thread].bytes = bytes;
+        tdata[idx_thread].len = len;
+        if (idx_thread != (n_threads - 1))
+            tdata[idx_thread].rets = ropit_opcodes_find_ret(bytes + tlen * idx_thread, tlen);
+        else
+            tdata[idx_thread].rets = ropit_opcodes_find_ret(bytes + tlen * idx_thread, tlen + rest);
+
+        // create thead
+        retcode = pthread_create(&threads[idx_thread], NULL, gadgets_find_thread_n, (void *)&(tdata[idx_thread]));
+        if (retcode != 0)
+            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d creation failed\n", idx_thread);
+    }
+    fprintf(stdout, "Threads created\n");
+
+    // wait for threads completion
+    fprintf(stdout, "Threads joining\n");
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        retcode = pthread_join(threads[idx_thread], &(tresult[idx_thread]));
+        printf("info: _gadgets_find_threaded(): offsets = %p\n", tresult[idx_thread]);
+        if (retcode != 0)
+            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d did not join\n", idx_thread);
+    }
+    fprintf(stdout, "Threads joined\n");
+
+    // agregate gadgets offsets
+    gadgets = offsets_new(0);
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++)
+        offsets_append(gadgets, tresult[idx_thread]);
+
+    // show and free offsets
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        printf("Local pointers of thread %d: %p\n", idx_thread, tresult[idx_thread]);
+        // free instructions
+        offsets_destroy(&tresult[idx_thread]);
+        offsets_destroy(&(tdata[idx_thread].rets));
+    }
+    // cleanup
+    free(tdata);
+    free(tresult);
+    free(threads);
+
+    return NULL;
+}
+
+// find valid instructions offsets before ret in a threaded way
+struct offsets_t *gadgets_find_threaded(uint8_t *bytes, int len) {
+    // code return from calls
+    int retcode;
+    // threads
+    int n_threads = 4;
+    int idx_thread;
     pthread_t *threads;
     // rest and split length
     int rlen, slen;
@@ -160,19 +273,19 @@ struct offsets_t* gadgets_find_threaded(uint8_t *bytes, int len) {
 
     // check params
     if (!bytes || len <= 0) {
-        fprintf(stderr, "error: _gadgets_find_stub(): Bytes null or len <= 0\n");
+        fprintf(stderr, "error: _gadgets_find_threaded(): Bytes null or len <= 0\n");
         return NULL;
     }
 
     // if buffer is not big enough
     // then no need for threading
-    if (len < nThreads) {
-        fprintf(stdout, "info: _gadgets_find_stub(): Buffer has len than %d bytes so no need for threading\n", nThreads);
+    if (len < n_threads) {
+        fprintf(stdout, "info: _gadgets_find_threaded(): Buffer has len than %d bytes so no need for threading\n", n_threads);
         return _gadgets_find_stub(bytes, len, (*rets)->offsets, (*rets)->used);
     }
 
     // allocate threads
-    threads = calloc(nThreads, sizeof(*threads));
+    threads = calloc(n_threads, sizeof(*threads));
     if (!threads)
         return NULL;
 
@@ -182,91 +295,91 @@ struct offsets_t* gadgets_find_threaded(uint8_t *bytes, int len) {
         return NULL;
 
     // allocate local offsets
-    local_pointers = calloc(nThreads, sizeof(*local_pointers));
+    local_pointers = calloc(n_threads, sizeof(*local_pointers));
     if (!local_pointers)
         return NULL;
 
     // allocate local offsets
-    tdata = calloc(nThreads, sizeof(*tdata));
+    tdata = calloc(n_threads, sizeof(*tdata));
     if (!tdata)
         return NULL;
 
     // search rets
-    rets = calloc(nThreads, sizeof(*rets));
+    rets = calloc(n_threads, sizeof(*rets));
     if (!rets) {
         return NULL;
     }
 
     // arithmetic to get buffer split length between threads
-    rlen = len % nThreads;
-    slen = (len - rlen) / nThreads;
+    rlen = len % n_threads;
+    slen = (len - rlen) / n_threads;
 
     // gets rets
-    for (idxThread = 0; idxThread < nThreads - 1; idxThread++) {
-        rets[idxThread] = ropit_opcodes_find_ret(bytes + slen * idxThread, slen);
+    for (idx_thread = 0; idx_thread < n_threads - 1; idx_thread++) {
+        rets[idx_thread] = ropit_opcodes_find_ret(bytes + slen * idx_thread, slen);
     }
-    rets[idxThread] = ropit_opcodes_find_ret(bytes + slen * idxThread, slen + rlen);
+    rets[idx_thread] = ropit_opcodes_find_ret(bytes + slen * idx_thread, slen + rlen);
 
     // create threads
     fprintf(stdout, "Creating threads\n");
-    for (idxThread = 0; idxThread < nThreads; idxThread++) {
-        tdata[idxThread].rets = rets[idxThread];
-        tdata[idxThread].bytes = bytes;
-        tdata[idxThread].capacity = len;
-        tdata[idxThread].used = len;
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        tdata[idx_thread].rets = rets[idx_thread];
+        tdata[idx_thread].bytes = bytes;
+        tdata[idx_thread].capacity = len;
+        tdata[idx_thread].used = len;
 
         // create thead
-        retcode = pthread_create(&threads[idxThread], NULL, gadgets_find_thread, (void *)&(tdata[idxThread]));
+        retcode = pthread_create(&threads[idx_thread], NULL, gadgets_find_thread, (void *)&(tdata[idx_thread]));
         if (retcode != 0)
-            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d creation failed\n", idxThread);
+            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d creation failed\n", idx_thread);
     }
     fprintf(stdout, "Threads created\n");
 
     // wait for threads completion
     fprintf(stdout, "Threads joining\n");
-    for (idxThread = 0; idxThread < nThreads; idxThread++) {
-        retcode = pthread_join(threads[idxThread], &(local_pointers[idxThread]));
-        printf("info: _gadgets_find_threaded(): offsets = %p\n", local_pointers[idxThread]);
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        retcode = pthread_join(threads[idx_thread], &(local_pointers[idx_thread]));
+        printf("info: _gadgets_find_threaded(): offsets = %p\n", local_pointers[idx_thread]);
         if (retcode != 0)
-            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d did not join\n", idxThread);
+            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d did not join\n", idx_thread);
     }
     fprintf(stdout, "Threads joined\n");
 
     // aggregate offsets
-    for (idxThread = 0; idxThread < nThreads; idxThread++) {
-        if (offsets_append(local_inst, local_pointers[idxThread]) == NULL) {
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        if (offsets_append(local_inst, local_pointers[idx_thread]) == NULL) {
             fprintf(stderr, "error: _gadgets_find_threaded(): Failed appending offsets\n");
         }
     }
 
     // show and free offsets
-    for (idxThread = 0; idxThread < nThreads; idxThread++) {
-        printf("Local pointers of thread %d: %p\n", idxThread, local_pointers[idxThread]);
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
+        printf("Local pointers of thread %d: %p\n", idx_thread, local_pointers[idx_thread]);
         // free instructions
-        offsets_destroy(&local_pointers[idxThread]);
+        offsets_destroy(&local_pointers[idx_thread]);
     }
 
     // clean up
     free(local_pointers);
     free(threads);
     free(tdata);
-    for (idxThread = 0; idxThread < nThreads; idxThread++)
-        offsets_destroy(&rets[idxThread]);
+    for (idx_thread = 0; idx_thread < n_threads; idx_thread++)
+        offsets_destroy(&rets[idx_thread]);
 
     return local_inst;
 }
 
 // find valid instructions offsets before ret
-struct offsets_t* _gadgets_find_stub(uint8_t *bytes, int len, int *rets, int nRets) {
-    int szRet;
-    int szInst;                /* size of instruction */
+struct offsets_t *_gadgets_find_stub(uint8_t *bytes, int len, int64_t *rets, int n_rets) {
+    int sz_ret;
+    int sz_inst;                /* size of instruction */
     x86_insn_t insn;         /* instruction */
-    int idxRet, idxValid;
+    int idx_ret, idx_valid;
     int validGadget;
     // dupe variables
-    int idxDupe, dupe;
+    int idx_dupe, dupe;
     // back track instruction count
-    int nBacktrackInst, nBacktrackBytes;
+    int n_backtrackInst, n_backtrackBytes;
     // gadgets offsets
     struct offsets_t *valid;
     // start for rop search
@@ -279,7 +392,7 @@ struct offsets_t* _gadgets_find_stub(uint8_t *bytes, int len, int *rets, int nRe
     }
 
     // search rets
-    if (!rets || nRets <= 0) {
+    if (!rets || n_rets <= 0) {
         fprintf(stderr, "error: _gadgets_find_stub(): No rets\n");
         return NULL;
     }
@@ -294,70 +407,70 @@ struct offsets_t* _gadgets_find_stub(uint8_t *bytes, int len, int *rets, int nRe
     // init disasm
     x86_init(opt_none, NULL, NULL);
 
-    for (idxRet = 0, idxValid = 0; idxRet < nRets; idxRet++) {
-        start = bytes + rets[idxRet];
-        nBacktrackInst = 0;
-        nBacktrackBytes = 0;
+    for (idx_ret = 0, idx_valid = 0; idx_ret < n_rets; idx_ret++) {
+        start = bytes + rets[idx_ret];
+        n_backtrackInst = 0;
+        n_backtrackBytes = 0;
         while ( bytes <= start && start <= bytes + len ) {
             /* disassemble address */
-            szInst = x86_disasm(start, start - bytes, 0, 0, &insn);
-            if (!szInst) {
-                // printf("not found inst\n");
-                nBacktrackBytes++;
-                x86_oplist_free(&insn);
+            sz_inst = x86_disasm(start, start - bytes, 0, 0, &insn);
+            if (!sz_inst) {
+                printf("not found inst\n");
+                n_backtrackBytes++;
+                // x86_oplist_free(&insn);
             }
             else {
                 // printf("found inst\n");
-                szRet = 0;
-                nBacktrackBytes = 0;
-                nBacktrackInst++;
-                x86_oplist_free(&insn);
+                sz_ret = 0;
+                n_backtrackBytes = 0;
+                n_backtrackInst++;
+                // x86_oplist_free(&insn);
 
                 gadget_start = --start;
                 validGadget = 0;
-                while ( bytes <= gadget_start && gadget_start <= bytes + rets[idxRet] ) {
+                while ( bytes <= gadget_start && gadget_start <= bytes + rets[idx_ret] ) {
                     /* disassemble address */
-                    szInst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
-                    if (szInst)
-                        gadget_start += szInst;
+                    sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
+                    if (sz_inst)
+                        gadget_start += sz_inst;
                     else {
                         validGadget = 0;
                         break;
                     }
                     x86_oplist_free(&insn);
 
-                    if (gadget_start == bytes + rets[idxRet]) {
+                    if (gadget_start == bytes + rets[idx_ret]) {
                         validGadget = 1;
                         break;
                     }
                 }
-                
-                szRet = x86_disasm(bytes + rets[idxRet], len - rets[idxRet], 0, 0, &insn);
+
+                sz_ret = x86_disasm(bytes + rets[idx_ret], len - rets[idx_ret], 0, 0, &insn);
 #define DISASSEMBLED_SIZE_MAX 1024
                 int disasLength;
                 char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
                 disasLength = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
-                printf("ret 0x%08x: %s\n", rets[idxRet], disassembled);
+                printf("ret 0x%08x: %s\n", rets[idx_ret], disassembled);
                 x86_oplist_free(&insn);
                 /*
                    printf("gadget_start: 0x%p\n", gadget_start);
-                   printf("bytes + rets[idxRet]: 0x%p\n\n", bytes + rets[idxRet]);
+                   printf("bytes + rets[idx_ret]: 0x%p\n\n", bytes + rets[idx_ret]);
                 //*/
 
                 if (validGadget == 1) {
                     // printf("got a good gadget\n");
                     gadget_start = start;
-                    while ( start <= gadget_start && gadget_start < bytes + rets[idxRet] + szRet ) {
+                    while ( start <= gadget_start && gadget_start < bytes + rets[idx_ret] + sz_ret ) {
                         /* disassemble address */
-                        szInst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
-                        if (szInst) {
+                        sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
+                        if (sz_inst) {
 #define DISASSEMBLED_SIZE_MAX 1024
                             int disasLength;
                             char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
                             disasLength = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
                             printf("0x%08x: %s\n", gadget_start - bytes, disassembled);
 
-                            gadget_start += szInst;
+                            gadget_start += sz_inst;
                         }
                         else {
                         }
@@ -369,7 +482,7 @@ struct offsets_t* _gadgets_find_stub(uint8_t *bytes, int len, int *rets, int nRe
             start--;
 
             // maximum intel instruction size is 15
-            if (nBacktrackBytes >= 15 || nBacktrackInst == 32)
+            if (n_backtrackBytes >= 15 || n_backtrackInst == 32)
                 break;
         }
     }
@@ -379,7 +492,7 @@ struct offsets_t* _gadgets_find_stub(uint8_t *bytes, int len, int *rets, int nRe
 }
 
 // find valid instructions offsets before ret
-struct offsets_t* gadgets_find(uint8_t *bytes, int len, uint64_t base) {
+struct offsets_t *gadgets_find(uint8_t *bytes, int len, uint64_t base) {
     struct offsets_t *rets, *instructions;
 
     // search rets
@@ -395,8 +508,8 @@ struct offsets_t* gadgets_find(uint8_t *bytes, int len, uint64_t base) {
 }
 
 int ropit_pointers_check_charset(uint64_t pointer,
-        char *charset, int szCharset) {
-    int idxCharset, idxPtr;
+        char *charset, int sz_charset) {
+    int idx_charset, idx_ptr;
     uint8_t p[8] = {0};
     int isGood = 0;
 
@@ -412,10 +525,10 @@ int ropit_pointers_check_charset(uint64_t pointer,
     // checking that each byte is in the charset
     // if it is
     // then it is good
-    for (idxPtr = 0; idxPtr < 8; idxPtr++) {
-        for (idxCharset = 0; idxCharset < szCharset; idxCharset++) {
+    for (idx_ptr = 0; idx_ptr < 8; idx_ptr++) {
+        for (idx_charset = 0; idx_charset < sz_charset; idx_charset++) {
             // badchar
-            if (p[idxPtr] != charset[idxCharset])
+            if (p[idx_ptr] != charset[idx_charset])
                 isGood = 0;
             // goodchar
             else {
@@ -433,11 +546,11 @@ int ropit_pointers_check_pointer_characteristics() {
 }
 
 // find gadgets in ELF file
-struct gadget_t* gadgets_find_in_elf(char *filename) {
+struct gadget_t *gadgets_find_in_elf(char *filename) {
     ELF_FILE *elffile;
     Elf32_Ehdr *elfHeader = NULL;
     Elf32_Phdr *programHeadersTable;
-    int idxProgramSegment;
+    int idx_programSegment;
 
     elffile = ElfLoad(filename);
     if (!elffile) {
@@ -463,11 +576,11 @@ struct gadget_t* gadgets_find_in_elf(char *filename) {
         fprintf(stderr, "error: gadgets_find_in_elf(): Failed getting Program Headers Table\n");
     }
     else {
-        for (idxProgramSegment = 0; idxProgramSegment < elfHeader->e_phnum; idxProgramSegment++) {
-            if (programHeadersTable[idxProgramSegment].p_flags & PF_X) {
-                gadgets_find(elffile->fmap->map + programHeadersTable[idxProgramSegment].p_offset,
-                        programHeadersTable[idxProgramSegment].p_filesz,
-                        programHeadersTable[idxProgramSegment].p_paddr);
+        for (idx_programSegment = 0; idx_programSegment < elfHeader->e_phnum; idx_programSegment++) {
+            if (programHeadersTable[idx_programSegment].p_flags & PF_X) {
+                gadgets_find(elffile->fmap->map + programHeadersTable[idx_programSegment].p_offset,
+                        programHeadersTable[idx_programSegment].p_filesz,
+                        programHeadersTable[idx_programSegment].p_paddr);
             }
         }
     }
@@ -478,11 +591,11 @@ struct gadget_t* gadgets_find_in_elf(char *filename) {
 }
 
 // find gadgets in PE file
-struct gadget_t* gadgets_find_in_pe(char *filename) {
+struct gadget_t *gadgets_find_in_pe(char *filename) {
     PE_FILE *pefile;
-    IMAGE_SECTION_HEADER *sectionHeadersTable;
-    IMAGE_NT_HEADERS *ntHeader = NULL;
-    int idxSection;
+    IMAGE_SECTION_HEADER *section_headersTable;
+    IMAGE_NT_HEADERS *nt_header = NULL;
+    int idx_section;
 
     pefile = PeLoad(filename);
     if (!pefile) {
@@ -496,22 +609,22 @@ struct gadget_t* gadgets_find_in_pe(char *filename) {
         return NULL;
     }
 
-    ntHeader = PeGetNtHeader(pefile);
-    if (!ntHeader) {
+    nt_header = PeGetNtHeader(pefile);
+    if (!nt_header) {
         fprintf(stderr, "error: gadgets_find_in_pe(): Failed getting NtHeaders\n");
         return NULL;
     }
-    sectionHeadersTable = PeGetSectionHeaderTable(pefile);
-    if (!sectionHeadersTable) {
+    section_headersTable = PeGetSection_headerTable(pefile);
+    if (!section_headersTable) {
         fprintf(stderr, "error: gadgets_find_in_pe(): Failed getting Section Headers Table\n");
         return NULL;
     }
 
-    for (idxSection = 0; idxSection < ntHeader->FileHeader.NumberOfSections; idxSection++) {
-        if (sectionHeadersTable[idxSection].Characteristics & IMAGE_SCN_MEM_EXECUTE) {
-            gadgets_find(pefile->fmap->map + sectionHeadersTable[idxSection].PointerToRawData,
-                    sectionHeadersTable[idxSection].SizeOfRawData,
-                    ntHeader->OptionalHeader.ImageBase + sectionHeadersTable[idxSection].VirtualAddress);
+    for (idx_section = 0; idx_section < nt_header->FileHeader.NumberOfSections; idx_section++) {
+        if (section_headersTable[idx_section].Characteristics & IMAGE_SCN_MEM_EXECUTE) {
+            gadgets_find(pefile->fmap->map + section_headersTable[idx_section].PointerToRawData,
+                    section_headersTable[idx_section].SizeOfRawData,
+                    nt_header->OptionalHeader.ImageBase + section_headersTable[idx_section].VirtualAddress);
         }
     }
 
@@ -521,7 +634,7 @@ struct gadget_t* gadgets_find_in_pe(char *filename) {
 }
 
 // find gadgets in executable file
-struct gadget_t* gadgets_find_in_executable(char *filename) {
+struct gadget_t *gadgets_find_in_executable(char *filename) {
     FILE *fp;
 
     fp = fopen(filename, "r");
@@ -541,7 +654,7 @@ struct gadget_t* gadgets_find_in_executable(char *filename) {
 }
 
 // find gadgets in file
-struct gadget_t* gadgets_find_in_file(char *filename) {
+struct gadget_t *gadgets_find_in_file(char *filename) {
     FILE *fp = NULL;
     struct filemap_t *fmap = NULL;
 
@@ -556,7 +669,7 @@ struct gadget_t* gadgets_find_in_file(char *filename) {
     if (!fmap)
         goto gadgets_find_in_file_cleanup;
 
-    gadgets_find(fmap->map, fmap->szMap, 0);
+    gadgets_find(fmap->map, fmap->sz_map, 0);
 
     return NULL;
 

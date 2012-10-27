@@ -5,7 +5,6 @@
 
 struct ropit_file_section_header_t {
     uint16_t type;
-    uint32_t nElt;
     uint32_t size;
 };
 

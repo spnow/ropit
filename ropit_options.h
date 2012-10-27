@@ -12,10 +12,11 @@ struct ropit_options_t {
     int filetype;
     int verbose_level;
     int color;
-    int threads;
+    int n_threads;
+    int arch;
 };
 
-struct ropit_options_t ropit_options;
+extern struct ropit_options_t config;
 
 #define ROPIT_OPTION_FILE_IN        0
 #define ROPIT_OPTION_FILE_OUT       1

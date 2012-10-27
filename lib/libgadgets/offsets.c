@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <stdint.h>
+
 #include "offsets.h"
 
 struct offsets_t* offsets_new(int nElt) {
@@ -8,6 +10,8 @@ struct offsets_t* offsets_new(int nElt) {
 
     if (!match)
         return NULL;
+    if (!nElt)
+        nElt = 1;
     match->offsets = calloc(nElt, sizeof(*(match->offsets)));
     if (!match->offsets)
         return NULL;
@@ -17,17 +21,17 @@ struct offsets_t* offsets_new(int nElt) {
     return match;
 }
 
-struct offsets_t* offsets_realloc(struct offsets_t *ropmatch, int nElt) {
-    if (!ropmatch || nElt <= 0)
+struct offsets_t* offsets_realloc(struct offsets_t *offsets, int nElt) {
+    if (!offsets || nElt <= 0)
         return NULL;
 
-    ropmatch->offsets = realloc(ropmatch->offsets, nElt * sizeof(*(ropmatch->offsets)));
-    ropmatch->capacity = nElt;
+    offsets->offsets = realloc(offsets->offsets, nElt * sizeof(*(offsets->offsets)));
+    offsets->capacity = nElt;
     //
-    if (ropmatch->used > nElt)
-        ropmatch->used = nElt;
+    if (offsets->used > nElt)
+        offsets->used = nElt;
 
-    return ropmatch;
+    return offsets;
 }
 
 void offsets_destroy(struct offsets_t **match) {
@@ -83,3 +87,26 @@ struct offsets_t* offsets_append(struct offsets_t *dest, struct offsets_t *src) 
 
     return dest;
 }
+
+// append an array to an offsets_t* struct
+struct offsets_t* offsets_append_array(struct offsets_t *dest, uint64_t *src, int n) {
+    int idxOff, nElt;
+
+    if (!dest || !src || n <= 0) {
+        fprintf(stderr, "error: offsets_append_array(): dest or src not set\n");
+        return NULL;
+    }
+
+    dest = offsets_realloc(dest, dest->used + n);
+    if (!dest) {
+        fprintf(stderr, "error: offsets_append_array(): failed allocating enough memory for dest\n");
+        return NULL;
+    }
+
+    for (idxOff = dest->used; idxOff < dest->used + n; idxOff++)
+        dest->offsets[idxOff] = src[idxOff - dest->used];
+    dest->used = dest->used + n;
+
+    return dest;
+}
+

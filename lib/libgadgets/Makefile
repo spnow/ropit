@@ -16,7 +16,7 @@ endef
 ARCH_OBJS = arch/x86/gadgets.lo
 # library
 LIB_NAME = libgadgets.la
-LIB_OBJS = gadgets.lo gadgets_find.lo string_extended.lo offsets.lo gadgets_cache.lo ../libfile-rop/byte-order.lo arch/x86/gadgets.lo
+LIB_OBJS = gadgets.lo gadgets_find.lo string_extended.lo offsets.lo gadgets_cache.lo ../libfile-rop/byte-order.lo arch/x86/gadgets.lo arch/x86/inst.lo
 
 %.lo: %.c
 	$(call compile_rule)
@@ -27,9 +27,14 @@ $(LIB_NAME): $(LIB_OBJS)
 arch/x86/gadgets.lo: arch/x86/gadgets.c
 	libtool --mode=compile $(CC) $(CFLAGS) $(HEADERS) $(CPPFLAGS) -c $< -o arch/x86/gadgets.o
 
+arch/x86/inst.lo: arch/x86/inst.c
+	libtool --mode=compile $(CC) $(CFLAGS) $(HEADERS) $(CPPFLAGS) -c $< -o arch/x86/inst.o
+
 .PHONY: clean mrproper
 
 clean:
+	rm -f arch/x86/gadgets.o
+	rm -f arch/x86/inst.o
 	rm -f $(LIB_OBJS)
 	rm -f *.o
 	rm -f $(LIB_NAME)

@@ -23,3 +23,7 @@ branch:
 - jmp [r32]
 - call [r32]
 
+flags:
+- pushf
+- popf
+

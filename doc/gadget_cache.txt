@@ -1,0 +1,13 @@
+The gadget cache is used as a temporary gadget holder.
+This can be used in order to build rop payloads but it will be slower.
+
+In order to be able to read the file on any hardware architecture, the file is
+written and read using big endian.
+
+The file is formatted as follow:
+
+magic | version | arch | base | n gadgets | gadget 0 | gadget 1 | ... | gadget n
+
+gadget :
+64 numeric hash | address | byte size | bytes | repr size | repr
+
