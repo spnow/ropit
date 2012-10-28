@@ -37,10 +37,14 @@ int gadgets_x86_init (void) {
     plugin->find_rets = ropit_x86_find_rets;
 }
 
+int compare_uint64 (const void * a, const void * b) {
+    return ( *(uint64_t*)a - *(uint64_t*)b );
+}
+
 // search rets
 struct offsets_t *ropit_x86_find_rets (uint8_t *bytes, int len) {
     int idx_byte, idx_op, idx_ret;
-    uint8_t opcodes[] = "\xc3\xc2\xca\xcb\xcf";
+    uint8_t opcodes[] = "\xc3\xc2\xca\xcb";
     struct offsets_t *rets;
 
     if (!bytes || len <= 0) {
@@ -52,9 +56,11 @@ struct offsets_t *ropit_x86_find_rets (uint8_t *bytes, int len) {
         return NULL;
 
     // search for rets in bytes
+    printf("total bytes: %d\n", len);
+    printf("sizeof(opcodes): %d\n", sizeof(opcodes));
     idx_ret = 0;
     for (idx_byte = 0; idx_byte < len; idx_byte++) {
-        for (idx_op = 0; idx_op < sizeof(opcodes); idx_op++) {
+        for (idx_op = 0; idx_op < (sizeof(opcodes) - 1); idx_op++) {
             if (bytes[idx_byte] == opcodes[idx_op]) {
                 rets->offsets[idx_ret] = idx_byte;
                 idx_ret++;
@@ -62,8 +68,16 @@ struct offsets_t *ropit_x86_find_rets (uint8_t *bytes, int len) {
             }
         }
     }
+    
+    printf ("there are %d bytes\n", idx_byte);
+    printf ("there are %d rets\n", idx_ret);
 
+    qsort (rets->offsets, idx_ret, sizeof(*rets->offsets), compare_uint64);
     rets->used = idx_ret;
+
+    printf ("sizeof(*rets->offsets) : %d\n", sizeof(*rets->offsets));
+    printf ("sizeof(*(rets->offsets)) : %d\n", sizeof(*(rets->offsets)));
+    printf ("sizeof(int) : %d\n", sizeof(int));
 
     return rets;
 }
@@ -182,21 +196,23 @@ char *ropit_x86_list_disasm (uint8_t *bytes, int len) {
    }
    */
 
+#define DISASSEMBLED_SIZE_MAX 1024
 // find valid instructions offsets before ret
 struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets) {
     int sz_ret;
     int sz_inst;                /* size of instruction */
     x86_insn_t insn;         /* instruction */
-    int idx_ret, idx_valid;
-    int validGadget;
+    int idx_ret;
+    int valid_gadget;
     // dupe variables
     int idx_dupe, dupe;
     // back track instruction count
     int n_backtrackInst, n_backtrackBytes;
-    // gadgets offsets
-    struct offsets_t *valid;
     // start for rop search
     uint8_t *start, *gadget_start;
+    // disassemble
+    int disasLength;
+    char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
 
     // check params
     if (!bytes || len <= 0) {
@@ -210,98 +226,87 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
         return NULL;
     }
 
-    // allocate
-    valid = offsets_new(len / 8);
-    if (!valid) {
-        fprintf(stderr, "error: gadgets_find(): failed alloc\n");
-        return NULL;
-    }
-
     // init disasm
     x86_init(opt_none, NULL, NULL);
 
-    for (idx_ret = 0, idx_valid = 0; idx_ret < n_rets; idx_ret++) {
+    for (idx_ret = 0; idx_ret < n_rets; idx_ret++) {
         start = bytes + rets[idx_ret];
+
         n_backtrackInst = 0;
         n_backtrackBytes = 0;
         while ( bytes <= start && start <= bytes + len ) {
             /* disassemble address */
-            sz_inst = x86_disasm(start, start - bytes, 0, 0, &insn);
+            sz_inst = x86_disasm(start, len - (start - bytes), 0, 0, &insn);
+            x86_oplist_free(&insn);
+
             if (!sz_inst) {
-                printf("not found inst\n");
+                // printf("not found inst\n");
                 n_backtrackBytes++;
-                // x86_oplist_free(&insn);
             }
             else {
                 // printf("found inst\n");
                 sz_ret = 0;
                 n_backtrackBytes = 0;
                 n_backtrackInst++;
-                // x86_oplist_free(&insn);
 
+                // check gadget validity
                 gadget_start = --start;
-                validGadget = 0;
+                valid_gadget = 0;
                 while ( bytes <= gadget_start && gadget_start <= bytes + rets[idx_ret] ) {
                     /* disassemble address */
                     sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
+                    x86_oplist_free(&insn);
                     if (sz_inst)
                         gadget_start += sz_inst;
-                    else {
-                        validGadget = 0;
+                    else
                         break;
-                    }
-                    x86_oplist_free(&insn);
 
                     if (gadget_start == bytes + rets[idx_ret]) {
-                        validGadget = 1;
+                        valid_gadget = 1;
                         break;
                     }
                 }
 
-                sz_ret = x86_disasm(bytes + rets[idx_ret], len - rets[idx_ret], 0, 0, &insn);
-#define DISASSEMBLED_SIZE_MAX 1024
-                int disasLength;
-                char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
-                disasLength = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
-                printf("ret 0x%08x: %s\n", rets[idx_ret], disassembled);
-                x86_oplist_free(&insn);
                 /*
                    printf("gadget_start: 0x%p\n", gadget_start);
                    printf("bytes + rets[idx_ret]: 0x%p\n\n", bytes + rets[idx_ret]);
                 //*/
 
-                if (validGadget == 1) {
+                if (valid_gadget == 1) {
+                    // show ret
+                    //*
+                    sz_ret = x86_disasm (bytes + rets[idx_ret], len - rets[idx_ret], 0, 0, &insn);
+                    disasLength = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
+                    printf("ret 0x%08x: %s\n", rets[idx_ret], disassembled);
+                    x86_oplist_free(&insn);
+                    //*/
+
                     // printf("got a good gadget\n");
                     gadget_start = start;
                     while ( start <= gadget_start && gadget_start < bytes + rets[idx_ret] + sz_ret ) {
                         /* disassemble address */
                         sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
                         if (sz_inst) {
-#define DISASSEMBLED_SIZE_MAX 1024
-                            int disasLength;
-                            char disassembled[DISASSEMBLED_SIZE_MAX] = {0};
                             disasLength = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
                             printf("0x%08x: %s\n", gadget_start - bytes, disassembled);
 
                             gadget_start += sz_inst;
-                        }
-                        else {
                         }
                         x86_oplist_free(&insn);
                     }
                     putchar('\n');
                 }
             }
-            start--;
+            --start;
 
             // maximum intel instruction size is 15
-            if (n_backtrackBytes >= 15 || n_backtrackInst == 32)
+            if (n_backtrackBytes >= 15 || n_backtrackInst == 8)
                 break;
         }
     }
     x86_cleanup();
 
-    return valid;
+    return 0;
 }
 
 // find valid instructions offsets before ret
@@ -316,8 +321,10 @@ struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
         return NULL;
     }
     instructions = _ropit_x86_find_gadgets (bytes, len, rets->offsets, rets->used);
-    offsets_destroy(&rets);
 
-    return instructions;
+    offsets_destroy(&rets);
+    offsets_destroy(&instructions);
+
+    return 0;
 }
 
