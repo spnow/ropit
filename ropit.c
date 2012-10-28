@@ -20,6 +20,7 @@
 #include <stdlib.h>
 
 #include "arch/arch.h"
+#include "arch/x86/gadgets.h"
 #include "gadgets_find.h"
 #include "file_pe.h"
 #include "file_elf.h"
@@ -58,6 +59,7 @@ int main (int argc, char *argv[]) {
     else
         gadgets_find_in_file (plugin, argv[1]);
     fclose(fp_file);
+    gadget_plugin_destroy (&plugin);
 
     fp_cache = fopen("tmp/gadget_cache", "rb");
     if (!fp_cache)

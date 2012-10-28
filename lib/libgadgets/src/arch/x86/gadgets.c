@@ -33,6 +33,12 @@ int gadgets_x86_init (void) {
     if (!plugin)
         return -1;
 
+    // arguments
+	plugin->name = strdup ("Intel x86");
+	plugin->arch = strdup ("x86");
+	plugin->desc = strdup ("Intel x86 Architecture");
+
+    // methods
     plugin->find_gadgets = ropit_x86_find_gadgets;
     plugin->find_rets = ropit_x86_find_rets;
 }

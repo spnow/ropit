@@ -263,6 +263,7 @@ struct gadget_t *gadgets_find_in_elf (char *filename) {
         }
     }
 
+    gadget_plugin_destroy (&plugin);
     ElfUnload(&elf_file);
 
     return NULL;
@@ -314,6 +315,8 @@ struct gadget_t *gadgets_find_in_pe (char *filename) {
         }
     }
 
+
+    gadget_plugin_destroy (&plugin);
     PeUnload(&pefile);
 
     return NULL;
