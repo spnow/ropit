@@ -34,8 +34,17 @@ struct gadget_plugin_t {
     struct offsets_t *(*find_branches) (uint8_t *buf, int len);
 };
 
+struct gadget_plugin_t *gadget_plugin_dispatch (int arch);
+struct gadget_plugin_t *gadget_plugin_new (void);
 struct gadget_plugin_t *gadget_plugin_new_copy (struct gadget_plugin_t *plugin);
 int gadget_plugin_destroy (struct gadget_plugin_t **plugin);
+
+// for init
+int plugin_no_init (void);
+int plugin_no_fini (void);
+int plugin_no_find_gadgets (uint8_t *buf, int len);
+struct offsets_t *plugin_no_find_rets (uint8_t *buf, int len);
+struct offsets_t *plugin_no_find_branches (uint8_t *buf, int len);
 
 #include "x86/gadgets.h"
 

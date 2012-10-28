@@ -46,6 +46,7 @@ target_link_libraries (gadgets
     gcov
     pthread
     pcre
+    disasm
     # custom
     fall4c
     bparse

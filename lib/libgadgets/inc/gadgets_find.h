@@ -38,6 +38,6 @@ struct gadget_t* gadgets_find_in_pe(char *filename);
 // find gadgets in executable file
 struct gadget_t* gadgets_find_in_executable(char *filename);
 // find gadgets in file
-struct gadget_t* gadgets_find_in_file(char *filename);
+struct gadget_t* gadgets_find_in_file (struct gadget_plugin_t *plugin, char *filename);
 
 #endif /* _GADGETS_H_ */

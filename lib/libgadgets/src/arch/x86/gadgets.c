@@ -5,8 +5,12 @@
 
 #include <libdis.h>
 
+#include "arch/arch.h"
 #include "offsets.h"
 #include "gadgets.h"
+
+struct offsets_t* ropit_x86_find_rets(uint8_t *bytes, int len);
+struct offsets_t* ropit_x86_find_gadgets(uint8_t *bytes, int len);
 
 static const char * jcc_insns[] = {
         "ja", "jae", "jb", "jbe", "jc", "jcxz", "jecxz", 
@@ -24,12 +28,42 @@ static const char * ret_insns[] = {
 };
 
 int gadgets_x86_init (void) {
+    struct gadget_plugin_t *plugin = gadget_plugin_new ();
+
+    if (!plugin)
+        return -1;
+
+    plugin->find_gadgets = ropit_x86_find_gadgets;
+    plugin->find_rets = ropit_x86_find_rets;
 }
 
 // search rets
-struct offsets_t* ropit_x86_find_rets(uint8_t *bytes, int len) {
+struct offsets_t *ropit_x86_find_rets (uint8_t *bytes, int len) {
+    int idx_byte, idx_op, idx_ret;
     uint8_t opcodes[] = "\xc3\xc2\xca\xcb\xcf";
-    struct offsets_t *rets = ropit_opcodes_find(bytes, len, opcodes, strlen((char*)opcodes), 1);
+    struct offsets_t *rets;
+
+    if (!bytes || len <= 0) {
+        return NULL;
+    }
+
+    rets = offsets_new(len);
+    if (!rets) 
+        return NULL;
+
+    // search for rets in bytes
+    idx_ret = 0;
+    for (idx_byte = 0; idx_byte < len; idx_byte++) {
+        for (idx_op = 0; idx_op < sizeof(opcodes); idx_op++) {
+            if (bytes[idx_byte] == opcodes[idx_op]) {
+                rets->offsets[idx_ret] = idx_byte;
+                idx_ret++;
+                break;
+            }
+        }
+    }
+
+    rets->used = idx_ret;
 
     return rets;
 }
@@ -118,35 +152,35 @@ char *ropit_x86_list_disasm (uint8_t *bytes, int len) {
 //    int size;                /* size of instruction */
 //    x86_insn_t insn;         /* instruction */
 /*
-    char line[4096] = {0};
-    int linelen = 4096;
-    int idx;
-    struct offsets_t *instructions;
+   char line[4096] = {0};
+   int linelen = 4096;
+   int idx;
+   struct offsets_t *instructions;
 
-    instructions = ropit_instructions_find(bytes, len);
-    if (!instructions)
-        return NULL;
+   instructions = ropit_instructions_find(bytes, len);
+   if (!instructions)
+   return NULL;
 
-    x86_init(opt_none, NULL, NULL);
-    printf("used: %d\n", instructions->used);
-    for (idx = 0; idx < instructions->used; idx++) {
-        size = x86_disasm(bytes, len, 0, instructions->offsets[idx], &insn);
-        if ( size ) {
-            x86_format_insn(&insn, line, linelen, intel_syntax);
-            printf("instruction[%d] at offset %d with size %d: %s\n", idx, instructions->offsets[idx], size, line);
-        }
-        else {
-            printf("this isn't an instruction\n");
-        }
-        x86_oplist_free(&insn);
-    }
-    x86_cleanup();
+   x86_init(opt_none, NULL, NULL);
+   printf("used: %d\n", instructions->used);
+   for (idx = 0; idx < instructions->used; idx++) {
+   size = x86_disasm(bytes, len, 0, instructions->offsets[idx], &insn);
+   if ( size ) {
+   x86_format_insn(&insn, line, linelen, intel_syntax);
+   printf("instruction[%d] at offset %d with size %d: %s\n", idx, instructions->offsets[idx], size, line);
+   }
+   else {
+   printf("this isn't an instruction\n");
+   }
+   x86_oplist_free(&insn);
+   }
+   x86_cleanup();
 
-    offsets_destroy(&instructions);
+   offsets_destroy(&instructions);
 
-    return NULL;
-}
-*/
+   return NULL;
+   }
+   */
 
 // find valid instructions offsets before ret
 struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets) {
@@ -281,7 +315,7 @@ struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
         fprintf(stderr, "error: gadgets_find(): No rets\n");
         return NULL;
     }
-    instructions = _ropit_x86_find_gadgets_stub(bytes, len, rets->offsets, rets->used);
+    instructions = _ropit_x86_find_gadgets (bytes, len, rets->offsets, rets->used);
     offsets_destroy(&rets);
 
     return instructions;

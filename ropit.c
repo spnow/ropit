@@ -19,6 +19,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "arch/arch.h"
 #include "gadgets_find.h"
 #include "file_pe.h"
 #include "file_elf.h"
@@ -28,6 +29,7 @@ int main (int argc, char *argv[]) {
     FILE *fp_file;
     FILE *fp_cache;
     int countGadgets;
+    struct gadget_plugin_t *plugin;
 
     printf("=================================\n");
     printf("== ROPit v0.1 alpha 2 by m_101 ==\n");
@@ -39,6 +41,12 @@ int main (int argc, char *argv[]) {
     }
     printf("\n");
 
+    plugin = gadgets_x86_init();
+    if (!plugin) {
+        fprintf(stderr, "Failed init x86 gadget plugin\n");
+        return -1;
+    }
+
     fp_file = fopen(argv[1], "r");
     if (!fp_file) {
         fprintf(stderr, "Failed opening file '%s' (r)\n", argv[1]);
@@ -48,7 +56,7 @@ int main (int argc, char *argv[]) {
     if (ElfCheck(fp_file) || PeCheck(fp_file))
         gadgets_find_in_executable(argv[1]);
     else
-        gadgets_find_in_file(argv[1]);
+        gadgets_find_in_file (plugin, argv[1]);
     fclose(fp_file);
 
     fp_cache = fopen("tmp/gadget_cache", "rb");

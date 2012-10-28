@@ -216,11 +216,12 @@ int ropit_pointers_check_pointer_characteristics() {
 }
 
 // find gadgets in ELF file
-struct gadget_t *gadgets_find_in_elf(char *filename) {
+struct gadget_t *gadgets_find_in_elf (char *filename) {
     ELF_FILE *elf_file;
     Elf32_Ehdr *elf_header = NULL;
     Elf32_Phdr *program_headers_table;
     int idx_program_segment;
+    struct gadget_plugin_t *plugin;
 
     elf_file = ElfLoad(filename);
     if (!elf_file) {
@@ -240,6 +241,13 @@ struct gadget_t *gadgets_find_in_elf(char *filename) {
         return NULL;
     }
 
+    // get appropriate plugin
+    plugin = gadget_plugin_dispatch (0);
+    if (!plugin) {
+        fprintf(stderr, "error: gadgets_find_in_elf(): Failed init gadget plugin\n");
+        return NULL;
+    }
+
     // program segments parsing (sections are part of program segments)
     program_headers_table = ElfGetProgramHeadersTable (elf_file);
     if (!program_headers_table) {
@@ -248,9 +256,9 @@ struct gadget_t *gadgets_find_in_elf(char *filename) {
     else {
         for (idx_program_segment = 0; idx_program_segment < elf_header->e_phnum; idx_program_segment++) {
             if (program_headers_table[idx_program_segment].p_flags & PF_X) {
-                gadgets_find(elf_file->fmap->map + program_headers_table[idx_program_segment].p_offset,
-                        program_headers_table[idx_program_segment].p_filesz,
-                        program_headers_table[idx_program_segment].p_paddr);
+                gadgets_find (plugin, elf_file->fmap->map + program_headers_table[idx_program_segment].p_offset,
+                        program_headers_table[idx_program_segment].p_filesz);
+            // base address = program_headers_table[idx_program_segment].p_paddr
             }
         }
     }
@@ -261,11 +269,12 @@ struct gadget_t *gadgets_find_in_elf(char *filename) {
 }
 
 // find gadgets in PE file
-struct gadget_t *gadgets_find_in_pe(char *filename) {
+struct gadget_t *gadgets_find_in_pe (char *filename) {
     PE_FILE *pefile;
     IMAGE_SECTION_HEADER *section_headers_table;
     IMAGE_NT_HEADERS *nt_header = NULL;
     int idx_section;
+    struct gadget_plugin_t *plugin;
 
     pefile = PeLoad(filename);
     if (!pefile) {
@@ -290,11 +299,18 @@ struct gadget_t *gadgets_find_in_pe(char *filename) {
         return NULL;
     }
 
+    // get appropriate plugin
+    plugin = gadget_plugin_dispatch (0);
+    if (!plugin) {
+        fprintf(stderr, "error: gadgets_find_in_pe(): Failed init gadget plugin\n");
+        return NULL;
+    }
+
     for (idx_section = 0; idx_section < nt_header->FileHeader.NumberOfSections; idx_section++) {
         if (section_headers_table[idx_section].Characteristics & IMAGE_SCN_MEM_EXECUTE) {
-            gadgets_find(pefile->fmap->map + section_headers_table[idx_section].PointerToRawData,
-                    section_headers_table[idx_section].SizeOfRawData,
-                    nt_header->OptionalHeader.ImageBase + section_headers_table[idx_section].VirtualAddress);
+            gadgets_find(plugin, pefile->fmap->map + section_headers_table[idx_section].PointerToRawData,
+                    section_headers_table[idx_section].SizeOfRawData);
+            // base address = nt_header->OptionalHeader.ImageBase + section_headers_table[idx_section].VirtualAddress
         }
     }
 
@@ -324,9 +340,13 @@ struct gadget_t *gadgets_find_in_executable (char *filename) {
 }
 
 // find gadgets in file
-struct gadget_t *gadgets_find_in_file(char *filename) {
+struct gadget_t *gadgets_find_in_file (struct gadget_plugin_t *plugin, char *filename)
+{
     FILE *fp = NULL;
     struct filemap_t *fmap = NULL;
+
+    if (!plugin)
+        return NULL;
 
     if (!filename)
         return NULL;
@@ -339,7 +359,7 @@ struct gadget_t *gadgets_find_in_file(char *filename) {
     if (!fmap)
         goto gadgets_find_in_file_cleanup;
 
-    gadgets_find(fmap->map, fmap->sz_map, 0);
+    plugin->find_gadgets (fmap->map, fmap->sz_map);
 
     return NULL;
 
