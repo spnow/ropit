@@ -18,38 +18,34 @@ configure_file (
     "${PROJECT_BINARY_DIR}/ropit_config.h"
     )
 
+add_subdirectory (lib/libbparse)
+add_subdirectory (lib/libfile-rop)
+add_subdirectory (lib/libgadgets)
+
+find_library (LIBBPARSE
+    NAMES bparse libbparse
+    HINTS lib
+    PATHS lib libbparse
+    )
+
 # add the binary tree to the search path for include files
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/inc")
+include_directories("${libgadgets_SOURCE_DIR}/inc")
+include_directories("${libbparse_SOURCE_DIR}/inc")
 
 # add the executable
 # executable testing dictionnary
-add_executable (dictionnary_example
-    src/data/dictionnary_example.c
+add_executable (ropit
+    ropit.c
+    ropit_options.c
     )
-target_link_libraries (dictionnary_example
-    ropit
+target_link_libraries (ropit
+    gadgets
     gcov
+    bparse
     )
 # test: coverage
-add_test(NAME dictionnary_example COMMAND dictionnary_example)
-
-# executable testing dictionnary
-add_executable (binstr_to_bin
-    tests/binstr_to_bin.c
-    )
-target_link_libraries (binstr_to_bin
-    ropit
-    gcov
-    )
-# test: coverage
-add_test(NAME binstr_to_bin COMMAND binstr_to_bin)
-
-install (TARGETS ropit DESTINATION lib)
-file (
-    COPY ${PROJECT_SOURCE_DIR}/inc/ DESTINATION inc/ropit
-    PATTERN inc/*
-    )
-install (DIRECTORY ${PROJECT_BINARY_DIR}/inc/ropit DESTINATION include)
+add_test(NAME ropit COMMAND ropit)
 

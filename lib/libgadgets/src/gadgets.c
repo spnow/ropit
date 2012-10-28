@@ -91,7 +91,7 @@ void gadget_destroy(struct gadget_t **gadget) {
 // copy a gadget to another one
 struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     // check parameters
-    if ((!dest || !src) && src == dest) {
+    if ((!dest || !src) || (src == dest)) {
         fprintf(stderr, "error: gadget_copy(): dest or src are non existent\n");
         return NULL;
     }

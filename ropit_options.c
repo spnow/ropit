@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <getopt.h>
 
+#include "arch/arch.h"
 #include "ropit_options.h"
 
 struct ropit_options_t config;
@@ -55,7 +56,7 @@ struct ropit_options_t *config_default (struct ropit_options_t *config)
     config->verbose_level = 0;
     config->color = 1;
     config->n_threads = 1;
-    config->arch = ARCH_X86;
+    config->arch = ARCH_X86_32;
 
     return config;
 }
@@ -63,6 +64,7 @@ struct ropit_options_t *config_default (struct ropit_options_t *config)
 // parse options and trigger actions
 void parse_options (int argc, char *argv[]) {
     int option_index = 0, option_id = 0;
+    int flag[NUMBER_OF_OPTIONS];
     static struct option long_options[] = 
     {
         { "in", required_argument, NULL, 'i' },
@@ -76,7 +78,7 @@ void parse_options (int argc, char *argv[]) {
     };
 
     while (option_id >= 0) {
-        option_id = getopt_long (argc, argv, "i::o:t::f::n::cv", long_options, &option_index)
+        option_id = getopt_long (argc, argv, "i::o:t::f::n::cv", long_options, &option_index);
 
         switch (option_id) {
             case 'i':

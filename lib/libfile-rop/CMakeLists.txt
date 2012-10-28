@@ -18,6 +18,12 @@ configure_file (
     "${PROJECT_BINARY_DIR}/filerop_config.h"
     )
 
+find_library (LIBBPARSE
+    NAMES bparse libbparse
+    HINTS ../
+    )
+
+# add the binary tree to the search path for include files
 # add the binary tree to the search path for include files
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
@@ -25,7 +31,7 @@ include_directories("${PROJECT_SOURCE_DIR}/inc")
 
 # add the library
 add_library(
-    libfilerop
+    filerop
     STATIC
     src/byte-order.c
     src/file-gadgets.c
@@ -34,7 +40,7 @@ add_library(
     src/file-ropit-section.c
     src/file-test.c
     )
-target_link_libraries (libfilerop
+target_link_libraries (filerop
     gcov
     )
 

@@ -18,22 +18,37 @@ configure_file (
     "${PROJECT_BINARY_DIR}/gadgets_config.h"
     )
 
+find_library (LIBBPARSE
+    NAMES bparse libbparse
+    HINTS ../
+    )
+
 # add the binary tree to the search path for include files
 # so that we will find TutorialConfig.h
 include_directories("${PROJECT_BINARY_DIR}")
 include_directories("${PROJECT_SOURCE_DIR}/inc")
+include_directories("${libbparse_SOURCE_DIR}/inc")
+include_directories("${libfilerop_SOURCE_DIR}/inc")
 
 # add the library
 add_library(
-    libgadgets
+    gadgets
     STATIC
     src/gadgets.c
     src/gadgets_cache.c
     src/gadgets_find.c
     src/offsets.c
+    src/arch/arch.c
+    src/arch/x86/gadgets.c
+    src/arch/x86/inst.c
     )
-target_link_libraries (libgadgets
+target_link_libraries (gadgets
     gcov
+    pthread
+    pcre
+    # custom
     fall4c
+    bparse
+    filerop
     )
 

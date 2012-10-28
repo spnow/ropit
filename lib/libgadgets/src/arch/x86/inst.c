@@ -1,8 +1,8 @@
 #include <stdint.h>
 
-#include "../arch.h"
+#include "arch/arch.h"
+#include "arch/x86/inst.h"
 #include "offsets.h"
-#include "inst.h"
 
 static struct opcode branches[] = {
     // rets

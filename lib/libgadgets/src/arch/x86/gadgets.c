@@ -271,12 +271,13 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
 }
 
 // find valid instructions offsets before ret
-struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len) {
+struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
+{
     struct offsets_t *rets, *instructions;
 
     // search rets
     rets = ropit_x86_find_rets(bytes, len);
-    if (!rets) 
+    if (!rets) {
         fprintf(stderr, "error: gadgets_find(): No rets\n");
         return NULL;
     }

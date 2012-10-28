@@ -138,10 +138,10 @@ int gadgets_find_threaded (struct gadget_plugin_t *plugin, uint8_t *bytes, int l
         // allocate and populate data for each thread
         plugins[idx_thread] = gadget_plugin_new_copy (plugin);
         tdata[idx_thread].plugin = plugins[idx_thread];
-        tdata[idx_thread].plugin->rets = rets + n_rets * idx_thread;
+        tdata[idx_thread].plugin->rets = rets->offsets + n_rets * idx_thread;
         tdata[idx_thread].plugin->n_rets = n_rets;
-        tdata[idx_thread].bytes = bytes + *(rets + n_rets * idx_thread);
-        tdata[idx_thread].len = len - *(rets + n_rets * idx_thread);
+        tdata[idx_thread].bytes = bytes + *(rets->offsets + n_rets * idx_thread);
+        tdata[idx_thread].n_bytes = len - *(rets->offsets + n_rets * idx_thread);
 
         // create thead
         retcode = pthread_create(&threads[idx_thread], NULL, _gadgets_find_thread, (void *)&(tdata[idx_thread]));
@@ -241,7 +241,7 @@ struct gadget_t *gadgets_find_in_elf(char *filename) {
     }
 
     // program segments parsing (sections are part of program segments)
-    program_headers_table = ElfGetProgramheaders_table (elf_file);
+    program_headers_table = ElfGetProgramHeadersTable (elf_file);
     if (!program_headers_table) {
         fprintf(stderr, "error: gadgets_find_in_elf(): Failed getting Program Headers Table\n");
     }

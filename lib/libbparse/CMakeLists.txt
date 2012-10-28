@@ -25,7 +25,7 @@ include_directories("${PROJECT_SOURCE_DIR}/inc")
 
 # add the library
 add_library(
-    libbparse
+    bparse
     STATIC
     src/escape.c  
     src/file_binary.c  
@@ -36,7 +36,7 @@ add_library(
     src/file_pe_view.c  
     src/raw_data.c
     )
-target_link_libraries (libbparse
+target_link_libraries (bparse
     gcov
     fall4c
     )

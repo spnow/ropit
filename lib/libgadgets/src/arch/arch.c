@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "arch.h"
+#include "arch/arch.h"
 
 struct gadget_plugin_t *current_gadget_plugin;
 
