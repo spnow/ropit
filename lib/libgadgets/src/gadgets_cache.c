@@ -4,6 +4,7 @@
 // threading
 #include <pthread.h>
 #include <semaphore.h>
+#include <fall4c/data/list.h>
 
 #include "byte-order.h"
 #include "gadgets.h"
@@ -11,17 +12,17 @@
 
 /* thread cache */
 // allocate gadget cache thread local storage
-struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache);
+struct gadget_cache_t *_gadget_cache_new_thread_data(struct gadget_cache_t *cache);
 // destroy gadget cache thread local storage
 void _gadget_cache_destroy_thread_data(struct gadget_cache_t *cache);
-struct gadget_cache_t* _gadget_cache_new(int n_gadget);
+struct gadget_cache_t *_gadget_cache_new(int n_gadget);
 
 // fwrite thread callback
 void *gadget_cache_fwrite_thread(void *data);
 
 /* thread cache */
 // allocate gadget cache thread local storage
-struct gadget_cache_t* _gadget_cache_new_thread_data(struct gadget_cache_t *cache) {
+struct gadget_cache_t *_gadget_cache_new_thread_data(struct gadget_cache_t *cache) {
     int retcode;
     struct gadget_cache_t *thread_lcache;
 
@@ -117,7 +118,8 @@ void _gadget_cache_destroy_thread_data(struct gadget_cache_t *gcache) {
 /* cache structure */
 
 // allocate cache
-struct gadget_cache_t* gadget_cache_new(int n_gadget) {
+struct gadget_cache_t *gadget_cache_new (int n_gadget)
+{
     struct gadget_cache_t *cache;
 
     if (n_gadget <= 0)
@@ -137,7 +139,8 @@ struct gadget_cache_t* gadget_cache_new(int n_gadget) {
     return cache;
 }
 
-struct gadget_cache_t* _gadget_cache_new(int n_gadget) {
+struct gadget_cache_t *_gadget_cache_new (int n_gadget) 
+{
     struct gadget_cache_t *cache;
 
     if (n_gadget <= 0)
@@ -159,7 +162,8 @@ struct gadget_cache_t* _gadget_cache_new(int n_gadget) {
 }
 
 // allocate gadget cache by copy
-struct gadget_cache_t* gadget_cache_new_copy(struct gadget_cache_t *cache) {
+struct gadget_cache_t *gadget_cache_new_copy (struct gadget_cache_t *cache) 
+{
     struct gadget_cache_t *copy, *res;
 
     // allocate copy
@@ -173,7 +177,8 @@ struct gadget_cache_t* gadget_cache_new_copy(struct gadget_cache_t *cache) {
 }
 
 // destroy cache
-void _gadget_cache_destroy(struct gadget_cache_t **cache) {
+void _gadget_cache_destroy (struct gadget_cache_t **cache)
+{
     // check parameters
     if (!cache || !*cache)
         return;
@@ -186,7 +191,8 @@ void _gadget_cache_destroy(struct gadget_cache_t **cache) {
 }
 
 // destroy cache
-void gadget_cache_destroy(struct gadget_cache_t **cache) {
+void gadget_cache_destroy (struct gadget_cache_t **cache)
+{
     // check parameters
     if (!cache || !*cache)
         return;
@@ -199,7 +205,8 @@ void gadget_cache_destroy(struct gadget_cache_t **cache) {
 }
 
 // gadget cache copy (both cache must have the same size)
-struct gadget_cache_t* gadget_cache_copy(struct gadget_cache_t *dest, struct gadget_cache_t *src) {
+struct gadget_cache_t *gadget_cache_copy (struct gadget_cache_t *dest, struct gadget_cache_t *src)
+{
     int idx_cache;
     int capDest, capSrc;
     struct gadget_t *copied, *cached;
@@ -241,7 +248,8 @@ struct gadget_cache_t* gadget_cache_copy(struct gadget_cache_t *dest, struct gad
 //
 
 // add gadget to cache
-int gadget_cache_add_gadget(struct gadget_cache_t *cache, struct gadget_t *gadget) {
+int gadget_cache_add_gadget (struct gadget_cache_t *cache, struct gadget_t *gadget)
+{
     // check parameters
     if (!cache || !gadget) {
         printf("gadget_cache_add_gadget(): cache does not exist\n");
@@ -266,7 +274,8 @@ int gadget_cache_add_gadget(struct gadget_cache_t *cache, struct gadget_t *gadge
 }
 
 // get element at index
-struct gadget_t* gadget_cache_get(struct gadget_cache_t *cache, int index) {
+struct gadget_t *gadget_cache_get (struct gadget_cache_t *cache, int index)
+{
     if (!cache)
         return NULL;
 
@@ -277,7 +286,8 @@ struct gadget_t* gadget_cache_get(struct gadget_cache_t *cache, int index) {
 }
 
 // set element at index
-struct gadget_t* gadget_cache_set(struct gadget_cache_t *cache, int index, struct gadget_t *gadget) {
+struct gadget_t *gadget_cache_set (struct gadget_cache_t *cache, int index, struct gadget_t *gadget)
+{
     if (!cache)
         return NULL;
 
@@ -290,7 +300,8 @@ struct gadget_t* gadget_cache_set(struct gadget_cache_t *cache, int index, struc
 }
 
 // zero entirely the cache
-int gadget_cache_zero(struct gadget_cache_t *cache) {
+int gadget_cache_zero (struct gadget_cache_t *cache)
+{
     int idx_gadget;
 
     // check parameters
@@ -308,7 +319,8 @@ int gadget_cache_zero(struct gadget_cache_t *cache) {
 }
 
 // purge cache: just "free" by resetting the used counter
-int gadget_cache_reset(struct gadget_cache_t *cache) {
+int gadget_cache_reset (struct gadget_cache_t *cache)
+{
     int idx_gadget;
 
     // check parameters
@@ -322,7 +334,8 @@ int gadget_cache_reset(struct gadget_cache_t *cache) {
 }
 
 // purge cache: "free" and re-init the cache
-int gadget_cache_purge(struct gadget_cache_t *cache) {
+int gadget_cache_purge (struct gadget_cache_t *cache)
+{
     int idx_gadget;
 
     // check parameters
@@ -342,7 +355,8 @@ int gadget_cache_purge(struct gadget_cache_t *cache) {
 }
 
 // get number of elements in cache
-int gadget_cache_get_size(struct gadget_cache_t *cache) {
+int gadget_cache_get_size (struct gadget_cache_t *cache)
+{
     // bye
     if (!cache) {
         fprintf(stderr, "gadget_cache_get_size(): cache is NULL\n");
@@ -358,7 +372,8 @@ int gadget_cache_get_size(struct gadget_cache_t *cache) {
 }
 
 // get max elements that can be stored in cache
-int gadget_cache_get_capacity(struct gadget_cache_t *cache) {
+int gadget_cache_get_capacity (struct gadget_cache_t *cache)
+{
     // bye
     if (!cache) {
         fprintf(stderr, "gadget_cache_get_capacity(): cache is NULL\n");
@@ -372,7 +387,8 @@ int gadget_cache_get_capacity(struct gadget_cache_t *cache) {
 /* cache file */
 
 // check cache file validity
-int gadget_cache_fcheck(FILE *fp) {
+int gadget_cache_fcheck (FILE *fp)
+{
     // boolean for file validity
     int check;
     // base address of file
@@ -446,7 +462,8 @@ int gadget_cache_fcheck(FILE *fp) {
 
 // save cache to file
 // return number of gadgets written
-int gadget_cache_fwrite(FILE *fp, struct gadget_cache_t *cache) {
+int gadget_cache_fwrite (FILE *fp, struct gadget_cache_t *cache)
+{
     int idx_cache, countGadgets;
     struct gadget_t *cached, file;
     int16_t sz_buf;
@@ -504,7 +521,8 @@ int gadget_cache_fwrite(FILE *fp, struct gadget_cache_t *cache) {
 }
 
 // fwrite thread
-void *gadget_cache_fwrite_thread(void *data) {
+void *gadget_cache_fwrite_thread (void *data)
+{
     struct gadget_cache_t *cache = data;
     struct gadget_cache_t *thread_lcache;
 
@@ -543,7 +561,8 @@ void *gadget_cache_fwrite_thread(void *data) {
 }
 
 // thread fwrite to augment data througput on multi-core systems
-int gadget_cache_fwrite_threaded(FILE *fp, struct gadget_cache_t *cache) {
+int gadget_cache_fwrite_threaded (FILE *fp, struct gadget_cache_t *cache)
+{
     int retcode;
     // 
     struct gadget_cache_t *local_cache;
@@ -587,7 +606,8 @@ int gadget_cache_fwrite_threaded(FILE *fp, struct gadget_cache_t *cache) {
 
 // load file to cache
 // return number of gadgets readed
-int gadget_cache_fread(FILE *fp, struct gadget_cache_t **cache, int n_read) {
+int gadget_cache_fread (FILE *fp, struct gadget_cache_t **cache, int n_read)
+{
     int idx_cache, countGadgets, bRead;
     struct gadget_t *cached, *gadget;
 
@@ -693,7 +713,8 @@ int gadget_cache_fread(FILE *fp, struct gadget_cache_t **cache, int n_read) {
 
 // show cache file
 // return number of gadgets showed
-int gadget_cache_fshow(FILE *fp) {
+int gadget_cache_fshow (FILE *fp)
+{
     int idx_cache, countGadgets;
     struct gadget_cache_t *cache = NULL;
     struct gadget_t *cached;
@@ -738,5 +759,96 @@ int gadget_cache_fshow(FILE *fp) {
     // gadget_cache_destroy(&cache);
 
     return countGadgets;
+}
+
+struct gadget_cache_queue_t *gadget_cache_queue_init (struct gadget_cache_queue_t **queue)
+{
+    int retcode;
+
+    if (!queue) {
+        fprintf (stderr, "gadget_cache_queue_init (): Bad parameter\n");
+        return NULL;
+    }
+
+    // init semaphore
+    retcode = sem_init(&(*queue)->queue_sem, 0, 0);
+    if (retcode != 0) {
+        fprintf (stderr, "error: gadget_cache_queue_init(): queue semaphore init failed\n");
+        return NULL;
+    }
+
+    // init mutexes
+    retcode = pthread_mutex_init(&(*queue)->queue_mutex, NULL);
+    if (retcode != 0) {
+        fprintf (stderr, "error: gadget_cache_queue_init(): queue mutex init failed\n");
+        return NULL;
+    }
+
+    (*queue)->caches = queue_new();
+    if (!(*queue)->caches) {
+        fprintf (stderr, "error: gadget_cache_queue_init(): queue init failed\n");
+        return NULL;
+    }
+
+    return (*queue);
+}
+
+struct gadget_cache_queue_t *gadget_cache_queue_add (struct gadget_cache_queue_t *queue, struct gadget_cache_t *cache)
+{
+    int retcode;
+
+    retcode = queue_push (&queue->caches, cache);
+    if (retcode)
+        return NULL;
+    
+    // there is data to be consumed!
+    sem_post (&queue->queue_sem);
+
+    return queue;
+}
+
+// thread function
+int gadget_cache_queue_fwrite_worker (struct gadget_cache_queue_t *queue)
+{
+    struct gadget_cache_t *cache;
+
+    if (!queue) {
+        return NULL;
+    }
+
+    if (!queue->file) {
+        return NULL;
+    }
+
+    // there is data to be consumed!
+    sem_wait (&queue->queue_sem);
+
+    cache = queue_pop (&queue->caches);
+    if (!cache)
+        return -1;
+
+    gadget_cache_fwrite (queue->file, cache);
+
+    return 0;
+}
+
+int gadget_cache_queue_set_file (struct gadget_cache_queue_t *queue, void *file)
+{
+    if (!queue || !file)
+        return -1;
+    
+    queue->file = file;
+
+    return 0;
+}
+
+struct gadget_cache_queue_t *gadget_cache_queue_destroy (struct gadget_cache_queue_t **queue)
+{
+    // destroy mutex
+    pthread_mutex_destroy (&(*queue)->queue_mutex);
+    // destroy semaphore
+    sem_destroy (&(*queue)->queue_sem);
+    free (*queue);
+    *queue = NULL;
 }
 

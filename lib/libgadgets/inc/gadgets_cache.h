@@ -92,6 +92,18 @@ struct gadget_cache_t {
     struct gadget_cache_t *thread_cache;
 };
 
+struct gadget_cache_queue_t {
+    int n_caches;
+    struct queue_t *caches;
+
+    // fwrite
+    FILE *file;
+
+    // mutex for read and write
+    pthread_mutex_t queue_mutex;
+    sem_t queue_sem;
+};
+
 /* cache structure */
 // allocate cache
 struct gadget_cache_t* gadget_cache_new(int nGadget);
@@ -118,6 +130,12 @@ int gadget_cache_get_size(struct gadget_cache_t *cache);
 // get max elements that can be stored in cache
 int gadget_cache_get_capacity(struct gadget_cache_t *cache);
 
+/* cache queue */
+struct gadget_cache_queue_t *gadget_cache_queue_init (struct gadget_cache_queue_t **queue);
+struct gadget_cache_queue_t *gadget_cache_queue_add (struct gadget_cache_queue_t *queue, struct gadget_cache_t *cache);
+int gadget_cache_queue_fwrite_worker (struct gadget_cache_queue_t *queue);
+int gadget_cache_queue_set_file (struct gadget_cache_queue_t *queue, void *file);
+struct gadget_cache_queue_t *gadget_cache_queue_destroy (struct gadget_cache_queue_t **queue);
 
 /* cache file */
 // check cache file validity

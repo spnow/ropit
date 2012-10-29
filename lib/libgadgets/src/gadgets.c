@@ -30,7 +30,7 @@
 #include "gadgets.h"
 
 // allocate new gadget
-struct gadget_t* gadget_new(void) {
+struct gadget_t *gadget_new(void) {
     struct gadget_t *gadget;
 
     gadget = calloc(sizeof(*gadget), 1);
@@ -39,7 +39,7 @@ struct gadget_t* gadget_new(void) {
 }
 
 // allocate new gadget and copy old
-struct gadget_t* gadget_new_copy(struct gadget_t *gadget) {
+struct gadget_t *gadget_new_copy(struct gadget_t *gadget) {
     struct gadget_t *copy;
 
     //
@@ -89,7 +89,7 @@ void gadget_destroy(struct gadget_t **gadget) {
 }
 
 // copy a gadget to another one
-struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
+struct gadget_t *gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     // check parameters
     if ((!dest || !src) || (src == dest)) {
         fprintf(stderr, "error: gadget_copy(): dest or src are non existent\n");
