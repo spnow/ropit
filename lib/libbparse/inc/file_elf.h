@@ -24,7 +24,7 @@
 
 #include <elf.h>
 
-#include "filemap.h"
+#include <fall4c/fall4c.h>
 
 #define	ELF_MAGIC		0x464c457f
 #define ELF_MAX_SIZE 	1024*1024*1024

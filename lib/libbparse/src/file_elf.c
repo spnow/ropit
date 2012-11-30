@@ -23,7 +23,7 @@
 #include <elf.h>
 
 #include "file_elf.h"
-#include "filemap.h"
+#include <fall4c/fall4c.h>
 
 //
 ELF_FILE* ElfLoad (char *filename) {
@@ -40,7 +40,7 @@ ELF_FILE* ElfLoad (char *filename) {
     }
     elf->filename = strdup(filename);
     elf->fp = fp;
-    elf->fmap = filemap_create(elf->fp);
+    elf->fmap = filemap_create(filename);
 
     return elf;
 }
@@ -103,7 +103,7 @@ Elf32_Ehdr* ElfGetHeader (ELF_FILE *elffile) {
         return NULL;
 
 	// create filemap
-	fmap = filemap_create (elffile->fp);
+	fmap = filemap_create (elffile->filename);
 	if (!fmap)
 		return NULL;
 
@@ -126,7 +126,7 @@ Elf32_Phdr* ElfGetProgramHeadersTable (ELF_FILE *elffile) {
     }
 
 	// create filemap
-	fmap = filemap_create (elffile->fp);
+	fmap = filemap_create (elffile->filename);
 	if (!fmap) {
         fprintf(stderr, "ElfGetProgramHeadersTable(): Failed file mapping\n");
 		return NULL;
@@ -144,7 +144,7 @@ Elf32_Phdr* ElfGetProgramHeadersTable (ELF_FILE *elffile) {
         fprintf(stderr, "ElfGetProgramHeadersTable(): No program segments\n");
 		return NULL;
     }
-    if (elfHeader->e_phoff >= fmap->szMap)
+    if (elfHeader->e_phoff >= fmap->sz_map)
         return NULL;
 	// else we have one
 	programHeadersTable = fmap->map + elfHeader->e_phoff;
@@ -168,7 +168,7 @@ Elf32_Shdr* ElfGetSectionHeadersTable (ELF_FILE *elffile) {
     }
 
 	// create filemap
-	fmap = filemap_create (elffile->fp);
+	fmap = filemap_create (elffile->filename);
 	if (!fmap) {
         fprintf(stderr, "ElfGetSectionHeadersTable(): Failed file mapping\n");
 		return NULL;
@@ -186,7 +186,7 @@ Elf32_Shdr* ElfGetSectionHeadersTable (ELF_FILE *elffile) {
         fprintf(stderr, "ElfGetSectionHeadersTable(): No sections\n");
 		return NULL;
     }
-    if (elfHeader->e_shoff >= fmap->szMap)
+    if (elfHeader->e_shoff >= fmap->sz_map)
         return NULL;
 	// else we have one
 	sectionsTable = fmap->map + elfHeader->e_shoff;
@@ -207,7 +207,7 @@ char* ElfGetSectionNamesTable (ELF_FILE *elffile) {
         return NULL;
 
 	// create filemap
-	fmap = filemap_create (elffile->fp);
+	fmap = filemap_create (elffile->filename);
 	if (!fmap)
 		return NULL;
 	

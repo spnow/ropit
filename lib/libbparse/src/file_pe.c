@@ -25,8 +25,7 @@
 
 #include "file_pe.h"
 #include "file_pe_internal.h"
-#include "filemap.h"
-#include "raw_data.h"
+#include <fall4c/fall4c.h>
 
 // create a new and empty PE_FILE struct :)
 PE_FILE* PeNew(void) {
@@ -61,7 +60,7 @@ PE_FILE* PeInit (FILE *fp) {
         return NULL;
 
 	pefile->fp = fp;
-	pefile->fmap = filemap_create (fp);
+	pefile->fmap = filemap_create_from_fp (fp);
 	pefile->directory_data = calloc(IMAGE_NUMBEROF_DIRECTORY_ENTRIES, sizeof(void *));
 	pefile->directory_data[IMAGE_DIRECTORY_ENTRY_EXPORT] = calloc(1, sizeof(struct list_exports));
 	pefile->directory_data[IMAGE_DIRECTORY_ENTRY_IMPORT] = calloc(1, sizeof(struct list_imports));
@@ -306,7 +305,7 @@ PIMAGE_DOS_HEADER PeGetDosHeader (PE_FILE *pefile) {
 
     // create filemap
     if (!pefile->fmap)
-        pefile->fmap = filemap_create (pefile->fp);
+        pefile->fmap = filemap_create (pefile->filename);
     if (!pefile->fmap)
         return NULL;
 
@@ -336,7 +335,7 @@ PIMAGE_NT_HEADERS PeGetNtHeader (PE_FILE *pefile) {
 
     // create filemap
     if (!pefile->fmap)
-        pefile->fmap = filemap_create (pefile->fp);
+        pefile->fmap = filemap_create (pefile->filename);
     if (!pefile->fmap)
         return NULL;
 
@@ -378,7 +377,7 @@ PIMAGE_SECTION_HEADER PeGetSectionHeaderFirst (PE_FILE *pefile) {
         return NULL;
 
     if (!pefile->fmap)
-        pefile->fmap = filemap_create (pefile->fp);
+        pefile->fmap = filemap_create (pefile->filename);
     if (!pefile->fmap)
         return NULL;
 
@@ -502,7 +501,7 @@ uint64_t PeReadDataDirectoryExports (PE_FILE *pefile, uint64_t data) {
 
     // file map
     if (!pefile->fmap)
-        pefile->fmap = filemap_create (pefile->fp);
+        pefile->fmap = filemap_create (pefile->filename);
     if (!pefile->fmap)
         return -1;
 
@@ -663,7 +662,7 @@ uint64_t PeReadDataDirectoryImports (PE_FILE *pefile, uint64_t data) {
 
     // set up filemap
     if (!pefile->fmap)
-        pefile->fmap = filemap_create (pefile->fp);
+        pefile->fmap = filemap_create (pefile->filename);
     if (!pefile->fmap)
         return -1;
 
@@ -755,7 +754,7 @@ uint64_t PeReadDataDirectoryImportThunks (PE_FILE *pefile, uint64_t data, size_t
         return -1;
 
     if (!pefile->fmap)
-        pefile->fmap = filemap_create (pefile->fp);
+        pefile->fmap = filemap_create (pefile->filename);
     if (!pefile->fmap)
         return -1;
 
@@ -797,7 +796,7 @@ uint64_t PeReadDataDirectoryImportThunks (PE_FILE *pefile, uint64_t data, size_t
             }
             // we get name
             importByName = pefile->fmap->map + RvaToOffset(pefile, thunkData->u1.AddressOfData);
-            if (importByName != -1 && importByName != 0 && importByName < (pefile->fmap->map + pefile->fmap->szMap)) {
+            if (importByName != -1 && importByName != 0 && importByName < (pefile->fmap->map + pefile->fmap->sz_map)) {
                 imports->hints[idxLibrary][idxThunks] = importByName->Hint;
                 imports->functions[idxLibrary][idxThunks] = importByName->Name;
                 idxThunks++;

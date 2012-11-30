@@ -27,14 +27,11 @@ include_directories("${PROJECT_SOURCE_DIR}/inc")
 add_library(
     bparse
     STATIC
-    src/escape.c  
     src/file_binary.c  
     src/file_elf.c  
     src/file_elf_view.c  
-    src/filemap.c  
     src/file_pe.c  
     src/file_pe_view.c  
-    src/raw_data.c
     )
 target_link_libraries (bparse
     gcov

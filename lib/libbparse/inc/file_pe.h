@@ -34,7 +34,7 @@ extern "C"
 #include <stdlib.h>
 #include <stdint.h>
 
-#include "filemap.h"
+#include <fall4c/fall4c.h>
 
 #include "file_generic.h"
 

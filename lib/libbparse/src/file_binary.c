@@ -21,7 +21,7 @@
 
 #include <string.h>
 
-#include "escape.h"
+#include <fall4c/fall4c.h>
 #include "file_binary.h"
 
 // check file existence
