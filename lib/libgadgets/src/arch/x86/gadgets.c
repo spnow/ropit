@@ -320,6 +320,10 @@ struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
 {
     struct offsets_t *rets, *instructions;
 
+    if (!bytes || len <= 0) {
+        return NULL;
+    }
+
     // search rets
     rets = ropit_x86_find_rets(bytes, len);
     if (!rets) {

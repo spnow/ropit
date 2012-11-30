@@ -23,7 +23,7 @@
 
 #include <elf.h>
 
-#include "filemap.h"
+#include <fall4c/fall4c.h>
 
 struct data_t {
     unsigned char *data;

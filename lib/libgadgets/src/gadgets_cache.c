@@ -784,11 +784,8 @@ struct gadget_cache_queue_t *gadget_cache_queue_init (struct gadget_cache_queue_
         return NULL;
     }
 
-    (*queue)->caches = queue_new();
-    if (!(*queue)->caches) {
-        fprintf (stderr, "error: gadget_cache_queue_init(): queue init failed\n");
-        return NULL;
-    }
+    // init queue caches
+    (*queue)->caches = NULL;
 
     return (*queue);
 }
