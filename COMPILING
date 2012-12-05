@@ -11,5 +11,5 @@ cd libfall4c
 
 == Compilation ==
 
-mkdir build && cd build && cmake .. && make
+./build.sh && cmake .. && make
 
