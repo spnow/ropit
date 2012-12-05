@@ -1,0 +1,15 @@
+== Dependencies ==
+
+ROPIt depends on the following libraries:
+- libfall4c:
+
+sudo apt-get install libunac1-dev
+
+git clone git://github.com/m101/libfall4c.git
+cd libfall4c
+./build && cd build && make && sudo make install && cd ..
+
+== Compilation ==
+
+mkdir build && cd build && cmake .. && make
+
