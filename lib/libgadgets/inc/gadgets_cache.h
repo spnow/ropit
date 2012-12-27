@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include <semaphore.h>
 
+#include <fall4c/fall4c.h>
 #include "gadgets.h"
 
 // generic
@@ -22,76 +23,6 @@
 #define GADGET_CACHE_STATE_FREAD        2
 #define GADGET_CACHE_STATE_FWRITE       3
 
-struct gadget_cache_thread_data_t {
-    // gadgets written count
-    int countGadgets;
-    pthread_mutex_t countGadgets_mutex;
-
-    // state: END, FREAD, FWRITE    
-    int state;
-
-    // thread for file writing
-    pthread_t fwrite_thread;
-    // mutex for file writing and any caches that is written to the file
-    pthread_mutex_t fwrite_mutex;
-
-    // mutex when looking for instructions
-    // find rets -> find for instructions -> find gadgets
-    pthread_mutex_t find_inst_mutex;
-
-    // threads for finding gadgets
-    pthread_t *gadgets_thread;
-    // semaphore for thread_cache access
-    sem_t *cache_sem;
-
-    // thread local cache
-    struct gadget_cache_t *thread_cache;
-};
-
-struct gadget_cache_data_t {
-    // number of gadgets in cache
-    int used;
-    // cache size
-    int capacity;
-    // stored gadgets in cache
-    struct gadget_t **gadgets;
-};
-
-struct gadget_ncache_t {
-    // file
-    FILE *fp;
-    int nthreads;
-
-    // cache
-    struct gadget_cache_data_t *cache;
-
-    // threads
-    // threads local storage
-    struct gadget_cache_thread_data_t *tdata;
-};
-
-struct gadget_cache_t {
-    // number of gadgets in cache
-    int used;
-    // cache size
-    int capacity;
-    // stored gadgets in cache
-    struct gadget_t **gadgets;
-
-    // thread data
-    int countGadgets;
-    pthread_mutex_t countGadgets_mutex;
-    // state: END, FREAD, FWRITE    
-    int state;
-    // file
-    FILE *fp;
-    pthread_t fwrite_thread;
-    // mutex for file access and thread_cache access (which can be this)
-    pthread_mutex_t fwrite_mutex;
-    sem_t fwrite_sem;
-    struct gadget_cache_t *thread_cache;
-};
-
 struct gadget_cache_queue_t {
     int n_caches;
     struct queue_t *caches;
@@ -104,35 +35,9 @@ struct gadget_cache_queue_t {
     sem_t queue_sem;
 };
 
-/* cache structure */
-// allocate cache
-struct gadget_cache_t* gadget_cache_new(int nGadget);
-// allocate gadget cache by copy
-struct gadget_cache_t* gadget_cache_new_copy(struct gadget_cache_t *cache);
-// destroy cache
-void gadget_cache_destroy(struct gadget_cache_t **cache);
-// gadget cache copy (both cache must have the same size)
-struct gadget_cache_t* gadget_cache_copy(struct gadget_cache_t *dest, struct gadget_cache_t *src);
-// add gadget to cache
-int gadget_cache_add_gadget(struct gadget_cache_t *cache, struct gadget_t *gadget);
-// get element at index
-struct gadget_t* gadget_cache_get(struct gadget_cache_t *cache, int index);
-// set element at index
-struct gadget_t* gadget_cache_set(struct gadget_cache_t *cache, int index, struct gadget_t *gadget);
-// zero entirely the cache
-int gadget_cache_zero(struct gadget_cache_t *cache);
-// purge cache: just "free" by resetting the used counter
-int gadget_cache_reset(struct gadget_cache_t *cache);
-// purge cache: "free" and re-init the cache
-int gadget_cache_purge(struct gadget_cache_t *cache);
-// get number of elements in cache
-int gadget_cache_get_size(struct gadget_cache_t *cache);
-// get max elements that can be stored in cache
-int gadget_cache_get_capacity(struct gadget_cache_t *cache);
-
 /* cache queue */
 struct gadget_cache_queue_t *gadget_cache_queue_init (struct gadget_cache_queue_t **queue);
-struct gadget_cache_queue_t *gadget_cache_queue_add (struct gadget_cache_queue_t *queue, struct gadget_cache_t *cache);
+struct gadget_cache_queue_t *gadget_cache_queue_add (struct gadget_cache_queue_t *queue, struct cache_t *cache);
 int gadget_cache_queue_fwrite_worker (struct gadget_cache_queue_t *queue);
 int gadget_cache_queue_set_file (struct gadget_cache_queue_t *queue, void *file);
 struct gadget_cache_queue_t *gadget_cache_queue_destroy (struct gadget_cache_queue_t **queue);
@@ -142,12 +47,10 @@ struct gadget_cache_queue_t *gadget_cache_queue_destroy (struct gadget_cache_que
 int gadget_cache_fcheck(FILE *fp);
 // save cache to file
 // return number of gadgets written
-int gadget_cache_fwrite(FILE *fp, struct gadget_cache_t *cache);
-// thread fwrite to augment data througput on multi-core systems
-int gadget_cache_fwrite_threaded(FILE *fp, struct gadget_cache_t *cache);
+int gadget_cache_fwrite(FILE *fp, struct cache_t *cache);
 // load file to cache
 // return number of gadgets readed
-int gadget_cache_fread(FILE *fp, struct gadget_cache_t **cache, int nRead);
+int gadget_cache_fread(FILE *fp, struct cache_t **cache, int nRead);
 // show cache file (it has to respect the file format ... no verification is made so possible crash)
 // return number of gadgets showed
 int gadget_cache_fshow(FILE *fp);
