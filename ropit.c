@@ -44,13 +44,13 @@ int main (int argc, char *argv[]) {
 
     plugin = gadgets_x86_init();
     if (!plugin) {
-        fprintf(stderr, "Failed init x86 gadget plugin\n");
+        fprintf(stderr, "error: main(): Failed init x86 gadget plugin\n");
         return -1;
     }
 
     fp_file = fopen(argv[1], "r");
     if (!fp_file) {
-        fprintf(stderr, "Failed opening file '%s' (r)\n", argv[1]);
+        fprintf(stderr, "error: main(): Failed opening file '%s' (r)\n", argv[1]);
         return -2;
     }
 
