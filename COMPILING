@@ -1,10 +1,22 @@
 == Dependencies ==
 
 ROPIt depends on the following libraries:
-- libfall4c:
-
+- libunac:
 sudo apt-get install libunac1-dev
 
+- libdisasm
+sudo apt-get install libdisasm-dev
+
+- libtar
+sudo apt-get install libtar-dev
+
+- libtar
+sudo apt-get install libtar-dev
+
+- libbzip2
+sudo apt-get install libbz2-dev
+
+- libfall4c:
 git clone git://github.com/m101/libfall4c.git
 cd libfall4c
 ./build && cd build && make && sudo make install && cd ..
