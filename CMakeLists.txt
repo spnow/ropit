@@ -18,9 +18,9 @@ configure_file (
     "${PROJECT_BINARY_DIR}/ropit_config.h"
     )
 
-add_subdirectory (lib/libbparse)
-add_subdirectory (lib/libfile-rop)
-add_subdirectory (lib/libgadgets)
+add_subdirectory (lib/bparse)
+add_subdirectory (lib/file)
+add_subdirectory (lib/gadgets)
 
 find_library (LIBBPARSE
     NAMES bparse libbparse
