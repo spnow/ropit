@@ -38,6 +38,9 @@
 struct gadget_t {
     uint64_t address;
     int32_t type;
+    // ret
+    uint64_t ret_addr;
+    uint8_t *ret_bytes;
     // binary repr
     int16_t len_bytes;
     int16_t sz_bytes;
@@ -48,6 +51,10 @@ struct gadget_t {
     uint8_t *repr;
 };
 
+// free gadget
+void gadget_free (struct gadget_t *gadget);
+// init gadget
+struct gadget_t *gadget_init (struct gadget_t *gadget, int sz);
 // allocate new gadget
 struct gadget_t* gadget_new(void);
 // allocate new gadget and copy old
@@ -58,5 +65,8 @@ void gadget_destroy(struct gadget_t **gadget);
 struct gadget_t* gadget_copy(struct gadget_t *dest, struct gadget_t *src);
 // get address of gadget
 uint64_t gadget_get_address(struct gadget_t *gadget);
+
+// show gadget
+void gadget_show (struct gadget_t *gadget);
 
 #endif /* _GADGETS_H_ */

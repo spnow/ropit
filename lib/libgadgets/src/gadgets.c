@@ -29,6 +29,21 @@
 
 #include "gadgets.h"
 
+// init gadget
+struct gadget_t *gadget_init (struct gadget_t *gadget, int sz)
+{
+    if (!gadget)
+        return NULL;
+
+    memset(gadget, 0, sizeof(*gadget));
+    gadget->sz_repr = sz;
+    gadget->repr = calloc(gadget->sz_repr, sizeof(*gadget->repr));
+    gadget->sz_bytes = sz;
+    gadget->bytes = calloc(gadget->sz_bytes, sizeof(*gadget->bytes));
+
+    return gadget;
+}
+
 // allocate new gadget
 struct gadget_t *gadget_new(void) {
     struct gadget_t *gadget;
@@ -78,13 +93,23 @@ struct gadget_t *gadget_new_copy(struct gadget_t *gadget) {
     return copy;
 }
 
+// free gadget
+void gadget_free (struct gadget_t *gadget)
+{
+    if (!gadget)
+        return;
+
+    free(gadget->repr);
+    free(gadget->bytes);
+    free(gadget);
+}
+
 // destroy gadget
 void gadget_destroy(struct gadget_t **gadget) {
     if (!gadget || !(*gadget))
         return;
 
-    free((*gadget)->repr);
-    free((*gadget)->bytes);
+    gadget_free (*gadget);
     *gadget = NULL;
 }
 
@@ -130,5 +155,27 @@ struct gadget_t *gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     memcpy(dest->repr, src->repr, src->len_repr);
 
     return dest;
+}
+
+// show gadget
+void gadget_show (struct gadget_t *gadget)
+{
+    char *hexstr;
+
+    if (!gadget) {
+        fprintf (stderr, "error: Bad parameter\n");
+        return;
+    }
+
+    printf ("gadget->address: %p\n", gadget->address);
+    printf ("gadget->bytes: ");
+    hexstr = bin_to_hexstr(gadget->bytes, gadget->len_bytes);
+    printf ("%s\n", hexstr);
+    free (hexstr);
+    printf ("gadget->len_bytes  : %d\n", gadget->len_bytes);
+    printf ("gadget->sz_bytes   : %d\n", gadget->sz_bytes);
+    printf ("gadget->repr       : %s\n", gadget->repr);
+    printf ("gadget->len_repr   : %d\n", gadget->len_repr);
+    printf ("gadget->sz_repr    : %d\n", gadget->sz_repr);
 }
 

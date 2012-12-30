@@ -11,7 +11,7 @@ int arch_is_big_endian() {
 uint16_t endian_swap_16(uint16_t x) {
     uint16_t swapped = x;
 
-    swapped = (swapped>>8) | (swapped<<8);
+    swapped = ((swapped>>8) & 0xFF) | ((swapped<<8) & 0xFF00);
 
     return swapped;
 }

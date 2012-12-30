@@ -8,7 +8,7 @@ struct gadget_plugin_t *current_gadget_plugin;
 
 struct gadget_plugin_t *gadget_plugin_dispatch (int arch)
 {
-    struct gadget_plugin_t *plugin = gadgets_x86_init();
+    struct gadget_plugin_t *plugin = &x86_gadget_plugin;
 
     return plugin;
 }

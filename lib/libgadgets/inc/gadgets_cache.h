@@ -5,6 +5,7 @@
 #include <semaphore.h>
 
 #include <fall4c/fall4c.h>
+#include "arch/arch.h"
 #include "gadgets.h"
 
 // generic
@@ -23,8 +24,12 @@
 #define GADGET_CACHE_STATE_FREAD        2
 #define GADGET_CACHE_STATE_FWRITE       3
 
+struct gadget_cache_t {
+    uint64_t base;
+    struct cache_t *cache;
+};
+
 struct gadget_cache_queue_t {
-    int n_caches;
     struct queue_t *caches;
 
     // fwrite
@@ -47,7 +52,7 @@ struct gadget_cache_queue_t *gadget_cache_queue_destroy (struct gadget_cache_que
 int gadget_cache_fcheck(FILE *fp);
 // save cache to file
 // return number of gadgets written
-int gadget_cache_fwrite(FILE *fp, struct cache_t *cache);
+int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t *plugin);
 // load file to cache
 // return number of gadgets readed
 int gadget_cache_fread(FILE *fp, struct cache_t **cache, int nRead);
