@@ -21,6 +21,7 @@
 
 #include "arch/arch.h"
 #include "arch/x86/gadgets.h"
+#include "gadgets_cache.h"
 #include "gadgets_find.h"
 #include "file_pe.h"
 #include "file_elf.h"
@@ -29,18 +30,18 @@
 int main (int argc, char *argv[]) {
     FILE *fp_file;
     FILE *fp_cache;
+    FILE *fp_out;
     int countGadgets;
     struct gadget_plugin_t *plugin;
 
-    printf("=================================\n");
-    printf("== ROPit v0.1 alpha 2 by m_101 ==\n");
-    printf("=================================\n");
     if (argc < 2) {
-        // usage(argv[0]);
-        printf("Usage: %s filename\n", argv[0]);
+        banner();
+        usage(argv[0]);
         return -1;
     }
-    printf("\n");
+    banner();
+
+    parse_options (argc, argv);
 
     plugin = gadgets_x86_init();
     if (!plugin) {
@@ -48,16 +49,16 @@ int main (int argc, char *argv[]) {
         return -1;
     }
 
-    fp_file = fopen(argv[1], "r");
+    fp_file = fopen(config.filename_input, "r");
     if (!fp_file) {
-        fprintf(stderr, "error: main(): Failed opening file '%s' (r)\n", argv[1]);
+        fprintf(stderr, "error: main(): Failed opening file '%s' (r)\n", config.filename_input);
         return -2;
     }
 
     if (ElfCheck(fp_file) || PeCheck(fp_file))
-        gadgets_find_in_executable(argv[1]);
+        gadgets_find_in_executable(config.filename_input);
     else
-        gadgets_find_in_file (plugin, argv[1]);
+        gadgets_find_in_file (plugin, config.filename_input);
     fclose(fp_file);
     gadget_plugin_destroy (&plugin);
 
@@ -65,20 +66,19 @@ int main (int argc, char *argv[]) {
     if (!fp_cache)
         return -1;
     printf("showing gadgets in cache\n");
-    countGadgets = gadget_cache_fshow(fp_cache);
-#ifdef PRINT_IN_COLOR
-    printf("\n== SUMMARY ==\n");
-    // printf("nInstructions: %s%lu\n", COLOR_YELLOW, nInstructions);
-    // printf("nGadgets: %s%lu\n", COLOR_YELLOW, nGadgets);
-    printf("%s\n", COLOR_WHITE);
-#else
-    printf("\n== SUMMARY ==\n");
-    // printf("nInstructions: %lu\n", nInstructions);
-    // printf("nGadgets: %lu\n", nGadgets);
-#endif
-    printf("Found %d gadgets\n", countGadgets);
+
+    if (config.filename_output == NULL)
+        fp_out = stdout;
+    else
+        fp_out = fopen(config.filename_output, "w");
+
+    countGadgets = gadget_cache_fshow(fp_cache, fp_out, config.format | config.color);
+
+    printf ("\n== SUMMARY ==\n");
+    printf ("Found %d gadgets\n", countGadgets);
 
     fclose(fp_cache);
+    fclose(fp_out);
 
     return 0;
 }

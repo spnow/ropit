@@ -1,6 +1,7 @@
 #ifndef _ROPIT_OPTIONS_H_
 #define _ROPIT_OPTIONS_H_
 
+void banner ();
 // show how to use ROPit
 void usage(char *program);
 // parse options and trigger actions
@@ -9,6 +10,7 @@ void parse_options (int argc, char *argv[]);
 struct ropit_options_t {
     char *filename_input;
     char *filename_output;
+    int format;
     int filetype;
     int verbose_level;
     int color;

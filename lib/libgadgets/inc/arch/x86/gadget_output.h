@@ -31,7 +31,7 @@
 #define COLOR_RED       "\033[91m"
 #define COLOR_WHITE     "\033[0m"
 
-int gadget_output_format_stack (struct gadget_t *gadget, int color);
-int gadget_output_format_line (struct gadget_t *gadget, int color);
+int gadget_output_format_stack (FILE *fp_out, struct gadget_t *gadget, int color);
+int gadget_output_format_line (FILE *fp_out, struct gadget_t *gadget, int color);
 
 #endif /* _GADGET_OUTPUT_H_ */

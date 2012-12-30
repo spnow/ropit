@@ -24,6 +24,11 @@
 #define GADGET_CACHE_STATE_FREAD        2
 #define GADGET_CACHE_STATE_FWRITE       3
 
+// flags
+#define GADGET_CACHE_COLOR              1
+#define GADGET_CACHE_STACK              2
+#define GADGET_CACHE_LINE               4
+
 struct gadget_cache_t {
     uint64_t base;
     struct cache_t *cache;
@@ -58,6 +63,6 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
 int gadget_cache_fread(FILE *fp, struct cache_t **cache, int nRead);
 // show cache file (it has to respect the file format ... no verification is made so possible crash)
 // return number of gadgets showed
-int gadget_cache_fshow(FILE *fp);
+int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags);
 
 #endif /* _ROPIT_GADGETS_CACHE_H_ */

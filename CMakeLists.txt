@@ -49,21 +49,3 @@ target_link_libraries (ropit
 # test: coverage
 add_test(NAME ropit COMMAND ropit)
 
-# add the executable
-# executable testing dictionnary
-find_path(GLIB_INCLUDE_DIR
-    NAMES glib.h
-    PATH_SUFFIXES glib-2.0
-    )
-find_package(GLIB2)
-if(GLIB2_FOUND)
-add_executable (ropit-file
-    ropit-file.c
-    )
-target_link_libraries (ropit-file
-    gcov
-    glib
-    )
-# test: coverage
-add_test(NAME ropit-file COMMAND ropit-file)
-endif()

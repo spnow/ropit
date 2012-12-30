@@ -45,6 +45,7 @@ add_library(
     src/gadgets_find.c
     src/offsets.c
     src/arch/arch.c
+    src/arch/x86/gadget_output.c
     src/arch/x86/gadgets.c
     src/arch/x86/inst.c
     )

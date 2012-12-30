@@ -7,6 +7,7 @@
 #include <fall4c/fall4c.h>
 
 #include "arch/arch.h"
+#include "arch/x86/gadget_output.h"
 #include "byte-order.h"
 #include "gadgets.h"
 #include "gadgets_cache.h"
@@ -308,7 +309,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
 
 // show cache file
 // return number of gadgets showed
-int gadget_cache_fshow (FILE *fp)
+int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
 {
     int idx_cache, count_gadgets;
     struct cache_t *cache;
@@ -316,40 +317,46 @@ int gadget_cache_fshow (FILE *fp)
     // base address
     uint64_t base;
 
-    if (!fp) {
-        fprintf(stderr, "error: gadget_cache_file_fshow(): Cache file was undefined\n");
+    if (!fp_in || !fp_out) {
+        fprintf(stderr, "error: gadget_cache_file_fshow(): Bad parameter(s)\n");
         return ERR_GADGET_CACHE_FILE_UNDEFINED;
     }
 
     // if file is not valid
     // then do not do anything else
-    if (gadget_cache_fcheck(fp) == 0) {
+    if (gadget_cache_fcheck(fp_in) == 0) {
         fprintf(stderr, "error: gadget_cache_file_fshow(): Cache file is invalid\n");
         return ERR_GADGET_CACHE_FILE_INVALID;
     }
 
+    if ((flags & GADGET_CACHE_STACK) == 0)
+        flags |= GADGET_CACHE_LINE;
+
     // rewind
-    fseek(fp, 0, SEEK_SET);
+    fseek(fp_in, 0, SEEK_SET);
 
     // get base address
-    fread(&base, sizeof(base), 1, fp);
+    fread(&base, sizeof(base), 1, fp_in);
     base = file_to_host_order_by_size(base, sizeof(base));
     printf("base address: 0x%08llx\n", base);
 
     count_gadgets = 0;
     cache = NULL;
-    while (gadget_cache_fread(fp, &cache, 1024) != 0) {
+    while (gadget_cache_fread(fp_in, &cache, 1024) != 0) {
         for (idx_cache = 0; idx_cache < cache_get_size(cache); idx_cache++) {
             cached = cache_get(cache, idx_cache);
             if (!cached || cached->repr == NULL)
                 continue;
 
-            printf("%p : %s\n", base + cached->address, cached->repr);
+            if (flags & GADGET_CACHE_LINE)
+                gadget_output_format_line (fp_out, cached, flags & GADGET_CACHE_COLOR);
+            else if (flags & GADGET_CACHE_STACK)
+                gadget_output_format_stack (fp_out, cached, flags & GADGET_CACHE_COLOR);
 
             count_gadgets++;
         }
         // check for fp error or end-of-file
-        if (ferror(fp) || feof(fp)) {
+        if (ferror(fp_in) || feof(fp_in)) {
             fprintf (stderr, "error: gadget_cache_fshow(): EOL\n");
             break;
         }

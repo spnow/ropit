@@ -4,6 +4,7 @@
 #include <libdis.h>
 
 #include "gadgets.h"
+#include "gadgets_cache.h"
 #include "arch/x86/gadget_output.h"
 
 /* formatting gadget as stack:
@@ -11,7 +12,7 @@ addr  : inst 1
 addr+x: inst 2
 ...
 */
-int gadget_output_format_stack (struct gadget_t *gadget, int color)
+int gadget_output_format_stack (FILE *fp_out, struct gadget_t *gadget, int color)
 {
     //
     int sz_inst;
@@ -24,7 +25,7 @@ int gadget_output_format_stack (struct gadget_t *gadget, int color)
     uint64_t addr;
     x86_insn_t insn;         /* instruction */
 
-    if (!gadget) {
+    if (!fp_out || !gadget) {
         fprintf (stderr, "error: gadget_output_format_stack(): Bad parameter(s)\n");
         return -1;
     }
@@ -44,10 +45,10 @@ int gadget_output_format_stack (struct gadget_t *gadget, int color)
 
         str_replace_chr(line, len_disasm, '\t', ' ');
         if (!color)
-            printf ("%p: %s\n", addr, line);
+            fprintf (fp_out, "%p: %s\n", addr, line);
         else {
-            printf (COLOR_RED "%p: " COLOR_GREEN "%s\n", addr, line);
-            printf ("%s", COLOR_WHITE);
+            fprintf (fp_out, COLOR_RED "%p: " COLOR_GREEN "%s\n", addr, line);
+            fprintf (fp_out, "%s", COLOR_WHITE);
         }
 
         addr += sz_inst;
@@ -56,7 +57,7 @@ int gadget_output_format_stack (struct gadget_t *gadget, int color)
     }
     x86_cleanup();
 
-    putchar ('\n');
+    fprintf (fp_out, "\n");
 
     return 0;
 }
@@ -65,7 +66,7 @@ int gadget_output_format_stack (struct gadget_t *gadget, int color)
 addr  : inst 1 # inst 2
 ...
 */
-int gadget_output_format_line (struct gadget_t *gadget, int color)
+int gadget_output_format_line (FILE *fp_out, struct gadget_t *gadget, int color)
 {
     //
     int sz_inst;
@@ -78,7 +79,7 @@ int gadget_output_format_line (struct gadget_t *gadget, int color)
     uint64_t addr;
     x86_insn_t insn;         /* instruction */
 
-    if (!gadget) {
+    if (!fp_out || !gadget) {
         fprintf (stderr, "error: gadget_output_format_stack(): Bad parameter(s)\n");
         return -1;
     }
@@ -99,16 +100,16 @@ int gadget_output_format_line (struct gadget_t *gadget, int color)
         str_replace_chr(line, len_disasm, '\t', ' ');
         if (!color) {
             if (bytes == gadget->bytes)
-                printf ("%p: %s # ", addr, line);
+                fprintf (fp_out, "%p: %s # ", addr, line);
             else
-                printf ("%s # ", line);
+                fprintf (fp_out, "%s # ", line);
         }
         else {
             if (bytes == gadget->bytes)
-                printf (COLOR_RED "%p: " COLOR_GREEN "%s" COLOR_PURPLE " # ", addr, line);
+                fprintf (fp_out, COLOR_RED "%p: " COLOR_GREEN "%s" COLOR_PURPLE " # ", addr, line);
             else
-                printf (COLOR_GREEN "%s" COLOR_PURPLE " # ", line);
-            printf ("%s", COLOR_WHITE);
+                fprintf (fp_out, COLOR_GREEN "%s" COLOR_PURPLE " # ", line);
+            fprintf (fp_out, "%s", COLOR_WHITE);
         }
 
         addr += sz_inst;
@@ -117,7 +118,7 @@ int gadget_output_format_line (struct gadget_t *gadget, int color)
     }
     x86_cleanup();
 
-    putchar ('\n');
+    fprintf (fp_out, "\n");
 
     return 0;
 }
