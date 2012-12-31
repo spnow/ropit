@@ -78,27 +78,27 @@ PE_FILE* PeLoad (char *filename) {
     IMAGE_SECTION_HEADER *sectionHeaderTable;
 
 	if (!filename) {
-        fprintf(stderr, "PeLoad(): Bad filename\n");
+        debug_printf (MESSAGE_ERROR, stderr, "PeLoad(): Bad filename\n");
 		return NULL;
     }
 
 	// open file
 	fp = fopen(filename, "r");
     if (!fp) {
-        fprintf(stderr, "PeLoad(): Failed opening '%s'\n", filename);
+        debug_printf (MESSAGE_ERROR, stderr, "PeLoad(): Failed opening '%s'\n", filename);
         return NULL;
     }
 
 	// check file type
 	if (PeCheck(fp) == 0) {
-        fprintf(stderr, "PeLoad(): Not a PE file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "PeLoad(): Not a PE file\n");
 		goto peload_cleanup;
     }
 
 	// pefile init
     pefile = PeInit (fp);
 	if (!pefile) {
-        fprintf(stderr, "PeLoad(): Init failed\n");
+        debug_printf (MESSAGE_ERROR, stderr, "PeLoad(): Init failed\n");
 		goto peload_cleanup;
     }
     pefile->filename = strdup(filename);
@@ -107,14 +107,14 @@ PE_FILE* PeLoad (char *filename) {
 	// get nt headers
 	ntHeaders = PeGetNtHeader (pefile);
 	if (!ntHeaders) {
-        fprintf(stderr, "PeLoad(): Failed reading NtHeaders\n");
+        debug_printf (MESSAGE_ERROR, stderr, "PeLoad(): Failed reading NtHeaders\n");
 		goto peload_cleanup;
     }
 
     // get section headers
     sectionHeaderTable = PeGetSectionHeaderTable (pefile);
 	if (!sectionHeaderTable) {
-        fprintf(stderr, "PeLoad(): Failed getting Section Headers Table\n");
+        debug_printf (MESSAGE_ERROR, stderr, "PeLoad(): Failed getting Section Headers Table\n");
 		goto peload_cleanup;
     }
 

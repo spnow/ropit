@@ -58,7 +58,7 @@ int show_infos (char *filename) {
         return -1;
 
     if (PeCheck(fp) == 0) {
-        fprintf(stderr, "Error: Not a valid PE file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid PE file\n");
         fclose (fp);
         exit(1);
     }
@@ -94,7 +94,7 @@ int show_section_headers (char *filename)
         return -1;
 
     if (PeCheck(fp) == 0) {
-        fprintf(stderr, "Error: Not a valid PE file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid PE file\n");
         fclose (fp);
         exit(1);
     }
@@ -133,7 +133,7 @@ int show_libraries (char *filename)
         return -1;
 
     if (PeCheck(fp) == 0) {
-        fprintf(stderr, "Error: Not a valid PE file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid PE file\n");
         fclose (fp);
         exit(1);
     }
@@ -168,7 +168,7 @@ int show_imports (char *filename)
         return -1;
 
     if (PeCheck(fp) == 0) {
-        fprintf(stderr, "Error: Not a valid PE file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid PE file\n");
         fclose (fp);
         exit(1);
     }
@@ -214,7 +214,7 @@ int show_exports (char *filename)
         return -1;
     
     if (PeCheck(fp) == 0) {
-        fprintf(stderr, "Error: Not a valid PE file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid PE file\n");
         fclose (fp);
         exit(1);
     }
@@ -222,12 +222,12 @@ int show_exports (char *filename)
     pefile = PeInit (fp);
     exports = PeReadDataDirectoryExports (pefile, fp);
     if (!exports) {
-        fprintf(stderr, "Failed: Reading exports\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Failed: Reading exports\n");
         return 1;
     }
 
     if (exports == -1u) {
-        fprintf(stderr, "No export section\n");
+        debug_printf (MESSAGE_ERROR, stderr, "No export section\n");
         return 1;
     }
 

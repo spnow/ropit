@@ -24,6 +24,8 @@
 #include <ctype.h>
 #include <elf.h>
 
+#include <fall4c/fall4c.h>
+
 #define BUF_SIZE    1024
 #define LINE_SIZE   1024
 
@@ -36,8 +38,10 @@ struct gadget_t *gadget_init (struct gadget_t *gadget, int sz)
         return NULL;
 
     memset(gadget, 0, sizeof(*gadget));
+    /*
     gadget->sz_repr = sz;
     gadget->repr = calloc(gadget->sz_repr, sizeof(*gadget->repr));
+    //*/
     gadget->sz_bytes = sz;
     gadget->bytes = calloc(gadget->sz_bytes, sizeof(*gadget->bytes));
 
@@ -59,14 +63,14 @@ struct gadget_t *gadget_new_copy(struct gadget_t *gadget) {
 
     //
     if (!gadget) {
-        fprintf(stderr, "error: gadget_new_copy(): gadget was null\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_new_copy(): gadget was null\n");
         return NULL;
     }
 
     // allocs
     copy = gadget_new();
     if (!copy) {
-        fprintf(stderr, "error: gadget_new_copy(): copy was not allocated\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_new_copy(): copy was not allocated\n");
         return NULL;
     }
     copy->repr = calloc(gadget->sz_repr, sizeof(*copy->repr));
@@ -75,7 +79,7 @@ struct gadget_t *gadget_new_copy(struct gadget_t *gadget) {
     // if one of the alloc failed
     // then copied object failed
     if (copy->repr == NULL || copy->bytes == NULL) {
-        fprintf(stderr, "error: gadget_new_copy(): failed bytes or repr allocation\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_new_copy(): failed bytes or repr allocation\n");
         free(copy->repr);
         free(copy->bytes);
 
@@ -85,7 +89,7 @@ struct gadget_t *gadget_new_copy(struct gadget_t *gadget) {
     // if copy failed
     // then bye
     if (gadget_copy(copy, gadget) == NULL) {
-        fprintf(stderr, "error: gadget_new_copy(): failed copy\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_new_copy(): failed copy\n");
         gadget_destroy(&copy);
         return NULL;
     }
@@ -117,30 +121,30 @@ void gadget_destroy(struct gadget_t **gadget) {
 struct gadget_t *gadget_copy(struct gadget_t *dest, struct gadget_t *src) {
     // check parameters
     if ((!dest || !src) || (src == dest)) {
-        fprintf(stderr, "error: gadget_copy(): dest or src are non existent\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_copy(): dest or src are non existent\n");
         return NULL;
     }
 
     // check src
     if (!src->bytes || !src->repr) {
-        fprintf(stderr, "error: gadget_copy(): src has no elements\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_copy(): src has no elements\n");
         return NULL;
     }
 
     // 
     if (dest->sz_bytes != src->sz_bytes) {
-        fprintf(stderr, "warning: gadget_copy(): realloc of dest->bytes\n");
+        debug_printf (MESSAGE_ERROR, stderr, "warning: gadget_copy(): realloc of dest->bytes\n");
         dest->bytes = realloc(dest->bytes, src->sz_bytes * sizeof(*dest->bytes));
     }
     // 
     if (dest->sz_repr != src->sz_repr) {
-        fprintf(stderr, "warning: gadget_copy(): realloc of dest->repr\n");
+        debug_printf (MESSAGE_ERROR, stderr, "warning: gadget_copy(): realloc of dest->repr\n");
         dest->repr = realloc(dest->repr, src->sz_repr * sizeof(*dest->repr));
     }
 
     // check
     if (dest->bytes == NULL || dest->repr == NULL) {
-        fprintf(stderr, "error: gadget_copy(): dest->bytes = %p or dest->repr = %p\n", dest->bytes, dest->repr);
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_copy(): dest->bytes = %p or dest->repr = %p\n", dest->bytes, dest->repr);
         return NULL;
     }
 
@@ -163,7 +167,7 @@ void gadget_show (struct gadget_t *gadget)
     char *hexstr;
 
     if (!gadget) {
-        fprintf (stderr, "error: Bad parameter\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Bad parameter\n");
         return;
     }
 

@@ -82,8 +82,8 @@ struct offsets_t *ropit_x86_find_rets (uint8_t *bytes, int len) {
         return NULL;
 
     // search for rets in bytes
-    printf("info : ropit_x86_find_rets(): total bytes: %d\n", len);
-    printf("info : ropit_x86_find_rets(): sizeof(opcodes): %d\n", sizeof(opcodes));
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): total bytes: %d\n", len);
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): sizeof(opcodes): %d\n", sizeof(opcodes));
     idx_ret = 0;
     for (idx_byte = 0; idx_byte < len; idx_byte++) {
         for (idx_op = 0; idx_op < (sizeof(opcodes) - 1); idx_op++) {
@@ -95,15 +95,15 @@ struct offsets_t *ropit_x86_find_rets (uint8_t *bytes, int len) {
         }
     }
     
-    printf ("info : ropit_x86_find_rets(): there are %d bytes\n", idx_byte);
-    printf ("info : ropit_x86_find_rets(): there are %d rets\n", idx_ret);
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): there are %d bytes\n", idx_byte);
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): there are %d rets\n", idx_ret);
 
     qsort (rets->offsets, idx_ret, sizeof(*rets->offsets), compare_uint64);
     rets->used = idx_ret;
 
-    printf ("info : ropit_x86_find_rets(): sizeof(*rets->offsets) : %d\n", sizeof(*rets->offsets));
-    printf ("info : ropit_x86_find_rets(): sizeof(*(rets->offsets)) : %d\n", sizeof(*(rets->offsets)));
-    printf ("info : ropit_x86_find_rets(): sizeof(int) : %d\n", sizeof(int));
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): sizeof(*rets->offsets) : %d\n", sizeof(*rets->offsets));
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): sizeof(*(rets->offsets)) : %d\n", sizeof(*(rets->offsets)));
+    debug_printf (MESSAGE_INFO, stdout, "info : ropit_x86_find_rets(): sizeof(int) : %d\n", sizeof(int));
 
     return rets;
 }
@@ -198,7 +198,7 @@ char *ropit_x86_disasm (uint8_t *bytes, int len, int *sz_dis)
     char *disasm;
 
     if (!bytes || len <= 0 || !sz_dis) {
-        fprintf (stderr, "error: ropit_x86_disasm(): Bad parameter(s)\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: ropit_x86_disasm(): Bad parameter(s)\n");
         return NULL;
     }
 
@@ -218,7 +218,7 @@ char *ropit_x86_disasm (uint8_t *bytes, int len, int *sz_dis)
 
     disasm = calloc (len_disasm, sizeof(*disasm));
     if (!disasm) {
-        fprintf (stderr, "error: ropit_x86_disasm(): Failed disasm alloc\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: ropit_x86_disasm(): Failed disasm alloc\n");
         return NULL;
     }
 
@@ -253,27 +253,27 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
 
     // check params
     if (!bytes || len <= 0) {
-        fprintf(stderr, "error: _ropit_x86_find_gadgets(): Bytes null or len <= 0\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _ropit_x86_find_gadgets(): Bytes null or len <= 0\n");
         return NULL;
     }
 
     // search rets
     if (!rets || n_rets <= 0) {
-        fprintf(stderr, "error: _ropit_x86_find_gadgets(): No rets\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _ropit_x86_find_gadgets(): No rets\n");
         return NULL;
     }
 
     // init gadget_cache
     fp_cache = fopen("tmp/gadget_cache", "w");
     if (!fp_cache) {
-        fprintf(stderr, "error: _ropit_x86_find_gadgets(): Failed open (w)\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _ropit_x86_find_gadgets(): Failed open (w)\n");
         return NULL;
     }
 
     // init cache_queue
     cache_queue = NULL;
     if (!gadget_cache_queue_init(&cache_queue)) {
-        fprintf(stderr, "error: _ropit_x86_find_gadgets(): Cache queue allocation failed\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _ropit_x86_find_gadgets(): Cache queue allocation failed\n");
         return NULL;
     }
     gadget_cache_queue_set_file (cache_queue, fp_cache);
@@ -282,7 +282,7 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
     n_gadgets = 1024;
     gadgets = calloc(sizeof(struct gadget_t), n_gadgets);
     if (!gadgets) {
-        fprintf(stderr, "error: _ropit_x86_find_gadgets(): Failed allocating caches\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _ropit_x86_find_gadgets(): Failed allocating caches\n");
         return NULL;
     }
 
@@ -293,7 +293,7 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
     n_caches = 1;
     caches = calloc(sizeof(struct cache_t), n_caches);
     if (!caches) {
-        fprintf(stderr, "error: _ropit_x86_find_gadgets(): Failed allocating caches\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _ropit_x86_find_gadgets(): Failed allocating caches\n");
         return NULL;
     }
 
@@ -361,13 +361,14 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
                     }
                     memcpy(gadgets[idx_gadgets].bytes, start, gadgets[idx_gadgets].len_bytes);
 
+                    /*
                     // construct repr
                     gadget_start = start;
                     gadgets[idx_gadgets].len_repr = 0;
                     sz_dst = gadgets[idx_gadgets].sz_repr;
                     gadgets[idx_gadgets].repr[0] = '\0';
                     while ( start <= gadget_start && gadget_start <= bytes + rets[idx_ret] ) {
-                        /* disassemble address */
+                        /  disassemble address
                         sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
                         gadget_start += sz_inst;
                         if (sz_inst <= 0) {
@@ -393,6 +394,7 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
                             sz_dst -= 3;
                         }
                     }
+                    //*/
 
                     if (cache_add (&(caches[idx_caches]), &(gadgets[idx_gadgets])) == -ERR_CACHE_FULL) {
                         gadget_cache_queue_add (cache_queue, &(caches[idx_caches]));
@@ -425,7 +427,7 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
     //*
     for (idx_gadgets = 0; idx_gadgets < n_gadgets; idx_gadgets++) {
         // gadget_free(&(gadgets[idx_gadgets]));
-        free (gadgets[idx_gadgets].repr);
+        // free (gadgets[idx_gadgets].repr);
         free (gadgets[idx_gadgets].bytes);
     }
     //*/
@@ -450,8 +452,7 @@ struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
     // search rets
     rets = ropit_x86_find_rets(bytes, len);
     if (!rets) {
-        fprintf(stderr, "error: gadgets_find(): No rets\n");
-        return NULL;
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find(): No rets\n");
     }
     instructions = _ropit_x86_find_gadgets (bytes, len, rets->offsets, rets->used);
 

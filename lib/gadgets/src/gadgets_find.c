@@ -33,7 +33,7 @@ struct offsets_t *ropit_filter_regexp(uint8_t *bytes, int len, char *expr) {
     // pattern = pcre_compile("(pop\\s+\\w{3}\\s+){2}ret", PCRE_CASELESS, &errptr, &erroffset, NULL);
     pattern = pcre_compile(expr, PCRE_CASELESS, &errptr, &erroffset, NULL);
     if (errptr) {
-        fprintf(stderr, "%s\n", errptr);
+        debug_printf (MESSAGE_ERROR, stderr, "%s\n", errptr);
         return NULL;
     }
 
@@ -41,7 +41,7 @@ struct offsets_t *ropit_filter_regexp(uint8_t *bytes, int len, char *expr) {
     for (start = 0, mcount = 0, idx = 0; start < len; idx++) {
         rc = pcre_exec(pattern, NULL, (char *)bytes, len, start, 0, wspace, wcount);
         if (rc <= 0) {
-            //fprintf(stderr, "Error: pcre_exec() failed\n");
+            //debug_printf (MESSAGE_ERROR, stderr, "Error: pcre_exec() failed\n");
             start++;
         }
         else {
@@ -99,38 +99,38 @@ int gadgets_find_threaded (struct gadget_plugin_t *plugin, uint8_t *bytes, int l
 
     // check params
     if (!plugin || !bytes || len <= 0) {
-        fprintf(stderr, "error: _gadgets_find_threaded_n(): Bytes null or len <= 0\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded_n(): Bytes null or len <= 0\n");
         return NULL;
     }
 
     tdata = calloc(n_threads, sizeof(*tdata));
     if (!tdata) {
-        fprintf(stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc tdata\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc tdata\n");
         return NULL;
     }
 
     tresult = calloc(n_threads, sizeof(*tresult));
     if (!tresult) {
-        fprintf(stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc tresult\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc tresult\n");
         return NULL;
     }
     
     plugins = calloc(n_threads, sizeof(*plugins));
     if (!plugins) {
-        fprintf(stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc plugins\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded_n(): Couldn't alloc plugins\n");
         return NULL;
     }
 
     // allocate threads
     threads = calloc(n_threads, sizeof(*threads));
     if (!threads) {
-        fprintf(stderr, "error: _gadgets_find_threaded_n(): Could alloc threads\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded_n(): Could alloc threads\n");
         return NULL;
     }
 
     rets = plugin->find_rets (bytes, len);
     if (!rets) {
-        fprintf(stderr, "error: _gadgets_find_threaded_n(): Could find rets\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded_n(): Could find rets\n");
         return NULL;
     }
 
@@ -146,7 +146,7 @@ int gadgets_find_threaded (struct gadget_plugin_t *plugin, uint8_t *bytes, int l
         // create thead
         retcode = pthread_create(&threads[idx_thread], NULL, _gadgets_find_thread, (void *)&(tdata[idx_thread]));
         if (retcode != 0)
-            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d creation failed\n", idx_thread);
+            debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded(): thread %d creation failed\n", idx_thread);
     }
     fprintf(stdout, "Threads created\n");
 
@@ -154,9 +154,9 @@ int gadgets_find_threaded (struct gadget_plugin_t *plugin, uint8_t *bytes, int l
     fprintf(stdout, "Threads joining\n");
     for (idx_thread = 0; idx_thread < n_threads; idx_thread++) {
         retcode = pthread_join(threads[idx_thread], &(tresult[idx_thread]));
-        printf("info: _gadgets_find_threaded(): offsets = %p\n", tresult[idx_thread]);
+        debug_printf (MESSAGE_INFO, stdout, "info : _gadgets_find_threaded(): offsets = %p\n", tresult[idx_thread]);
         if (retcode != 0)
-            fprintf(stderr, "error: _gadgets_find_threaded(): thread %d did not join\n", idx_thread);
+            debug_printf (MESSAGE_ERROR, stderr, "error: _gadgets_find_threaded(): thread %d did not join\n", idx_thread);
     }
     fprintf(stdout, "Threads joined\n");
 
@@ -225,33 +225,33 @@ struct gadget_t *gadgets_find_in_elf (char *filename) {
 
     elf_file = ElfLoad(filename);
     if (!elf_file) {
-        fprintf(stderr, "error: gadgets_find_in_elf(): Failed loading ELF\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed loading ELF\n");
         return NULL;
     }
 
     if (ElfCheckArchitecture (elf_file) == 0) {
-        fprintf(stderr, "error: gadgets_find_in_elf(): Architecture not supported\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Architecture not supported\n");
         ElfUnload(&elf_file);
         return NULL;
     }
 
     elf_header = ElfGetHeader(elf_file);
     if (!elf_header) {
-        fprintf(stderr, "error: gadgets_find_in_elf(): Failed getting elf_headers\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed getting elf_headers\n");
         return NULL;
     }
 
     // get appropriate plugin
     plugin = gadget_plugin_dispatch (0);
     if (!plugin) {
-        fprintf(stderr, "error: gadgets_find_in_elf(): Failed init gadget plugin\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed init gadget plugin\n");
         return NULL;
     }
 
     // program segments parsing (sections are part of program segments)
     program_headers_table = ElfGetProgramHeadersTable (elf_file);
     if (!program_headers_table) {
-        fprintf(stderr, "error: gadgets_find_in_elf(): Failed getting Program Headers Table\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed getting Program Headers Table\n");
     }
     else {
         for (idx_program_segment = 0; idx_program_segment < elf_header->e_phnum; idx_program_segment++) {
@@ -279,31 +279,31 @@ struct gadget_t *gadgets_find_in_pe (char *filename) {
 
     pefile = PeLoad(filename);
     if (!pefile) {
-        fprintf(stderr, "error: gadgets_find_in_pe(): Failed loading PE\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed loading PE\n");
         return NULL;
     }
 
     if (PeCheckArchitecture (pefile) == 0) {
-        fprintf(stderr, "error: gadgets_find_in_pe(): Architecture not supported\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Architecture not supported\n");
         PeUnload(&pefile);
         return NULL;
     }
 
     nt_header = PeGetNtHeader(pefile);
     if (!nt_header) {
-        fprintf(stderr, "error: gadgets_find_in_pe(): Failed getting NtHeaders\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed getting NtHeaders\n");
         return NULL;
     }
     section_headers_table = PeGetSectionHeaderTable(pefile);
     if (!section_headers_table) {
-        fprintf(stderr, "error: gadgets_find_in_pe(): Failed getting Section Headers Table\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed getting Section Headers Table\n");
         return NULL;
     }
 
     // get appropriate plugin
     plugin = gadget_plugin_dispatch (0);
     if (!plugin) {
-        fprintf(stderr, "error: gadgets_find_in_pe(): Failed init gadget plugin\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed init gadget plugin\n");
         return NULL;
     }
 
@@ -335,7 +335,7 @@ struct gadget_t *gadgets_find_in_executable (char *filename) {
     else if (PeCheck(fp))
         gadgets_find_in_pe(filename);
     else
-        fprintf(stderr, "error: %s is not an executable file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: %s is not an executable file\n");
 
     fclose(fp);
 
@@ -358,7 +358,7 @@ struct gadget_t *gadgets_find_in_file (struct gadget_plugin_t *plugin, char *fil
     if (!fp)
         goto gadgets_find_in_file_cleanup;
 
-    fmap = filemap_create(fp);
+    fmap = filemap_create(filename);
     if (!fmap)
         goto gadgets_find_in_file_cleanup;
 

@@ -31,7 +31,7 @@ int main (int argc, char *argv[]) {
     FILE *fp_file;
     FILE *fp_cache;
     FILE *fp_out;
-    int countGadgets;
+    int count_gadgets;
     struct gadget_plugin_t *plugin;
 
     if (argc < 2) {
@@ -45,13 +45,13 @@ int main (int argc, char *argv[]) {
 
     plugin = gadgets_x86_init();
     if (!plugin) {
-        fprintf(stderr, "error: main(): Failed init x86 gadget plugin\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: main(): Failed init x86 gadget plugin\n");
         return -1;
     }
 
     fp_file = fopen(config.filename_input, "r");
     if (!fp_file) {
-        fprintf(stderr, "error: main(): Failed opening file '%s' (r)\n", config.filename_input);
+        debug_printf (MESSAGE_ERROR, stderr, "error: main(): Failed opening file '%s' (r)\n", config.filename_input);
         return -2;
     }
 
@@ -72,10 +72,10 @@ int main (int argc, char *argv[]) {
     else
         fp_out = fopen(config.filename_output, "w");
 
-    countGadgets = gadget_cache_fshow(fp_cache, fp_out, config.format | config.color);
+    count_gadgets = gadget_cache_fshow(fp_cache, fp_out, config.format | config.color);
 
     printf ("\n== SUMMARY ==\n");
-    printf ("Found %d gadgets\n", countGadgets);
+    printf ("Found %d gadgets\n", count_gadgets);
 
     fclose(fp_cache);
     fclose(fp_out);

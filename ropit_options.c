@@ -12,19 +12,19 @@ struct ropit_options_t config;
 
 // input file
 int ropit_option_file_input (int random) {
-    fprintf(stderr, "error: Function not yet implemented\n");
+    debug_printf (MESSAGE_ERROR, stderr, "error: Function not yet implemented\n");
     return -1;
 }
 
 // output file
 int ropit_option_file_output (int random) {
-    fprintf(stderr, "error: Function not yet implemented\n");
+    debug_printf (MESSAGE_ERROR, stderr, "error: Function not yet implemented\n");
     return -1;
 }
 
 // file type
 int ropit_option_file_type (int random) {
-    fprintf(stderr, "error: Function not yet implemented\n");
+    debug_printf (MESSAGE_ERROR, stderr, "error: Function not yet implemented\n");
     return -1;
 }
 
@@ -96,7 +96,7 @@ void parse_options (int argc, char *argv[]) {
     };
 
     if (argc <= 0 || !argv) {
-        fprintf (stderr, "fatal: No parameters\n");
+        debug_printf (MESSAGE_ERROR, stderr, "fatal: No parameters\n");
         exit (1);
     }
 
@@ -129,7 +129,7 @@ void parse_options (int argc, char *argv[]) {
                         || config.n_threads == LONG_MAX
                         || config.n_threads <= 0
                         || config.n_threads > 8) {
-                    fprintf (stderr, "fatal: n_threads should be between 0-8\n");
+                    debug_printf (MESSAGE_ERROR, stderr, "fatal: n_threads should be between 0-8\n");
                     exit (1);
                 }
                 break;
@@ -137,7 +137,8 @@ void parse_options (int argc, char *argv[]) {
                 config.color = GADGET_CACHE_COLOR;
                 break;
             case 'v':
-                config.verbose_level++;
+                if (config.verbose_level < 3)
+                    config.verbose_level++;
                 break;
             case 'h':
                 usage(argv[0]);
@@ -149,13 +150,16 @@ void parse_options (int argc, char *argv[]) {
     }
 
     if (config.filename_input == NULL) {
-        fprintf(stderr, "error: --input not defined\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: --input not defined\n");
         exit(-1);
     }
 
     if (config.format == 0) {
-        fprintf (stderr, "fatal: format should be either 'stack' or 'line'\n");
+        debug_printf (MESSAGE_ERROR, stderr, "fatal: format should be either 'stack' or 'line'\n");
         exit (1);
     }
+
+    if (config.verbose_level > 0)
+        debug_set_verbose_level (config.verbose_level);
 }
 

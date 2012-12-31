@@ -120,7 +120,7 @@ void show_file (char *filename) {
 
 int main (int argc, char *argv[]) {
     if (argc < 2) {
-        fprintf(stderr, "usage: %s filename\n", argv[0]);
+        debug_printf (MESSAGE_ERROR, stderr, "usage: %s filename\n", argv[0]);
         return -1;
     }
 

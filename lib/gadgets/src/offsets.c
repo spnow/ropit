@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+#include <fall4c/fall4c.h>
+
 #include "offsets.h"
 
 struct offsets_t* offsets_new(int nElt) {
@@ -66,19 +68,19 @@ struct offsets_t* offsets_append(struct offsets_t *dest, struct offsets_t *src) 
 
     // check parameters
     if (!dest || !src) {
-        fprintf(stderr, "error: offsets_append(): dest or src not set\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: offsets_append(): dest or src not set\n");
         return NULL;
     }
 
     // destination
-    fprintf(stdout, "info: before: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
+    debug_printf (MESSAGE_INFO, stdout, "info : before: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
     dest = offsets_realloc(dest, dest->used + src->used);
     if (!dest) {
-        fprintf(stderr, "error: offsets_append(): failed allocating enough memory for dest\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: offsets_append(): failed allocating enough memory for dest\n");
         return NULL;
     }
-    fprintf(stdout, "info: after: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
-    fprintf(stdout, "info: offsets_append(): src->used=%d dest->used=%d\n", src->used, dest->used);
+    debug_printf (MESSAGE_INFO, stdout, "info : after: dest->capacity: %d , dest->used: %d\n", dest->capacity, dest->used);
+    debug_printf (MESSAGE_INFO, stdout, "info : offsets_append(): src->used=%d dest->used=%d\n", src->used, dest->used);
 
     //
     for (idxOff = dest->used; idxOff < dest->used + src->used; idxOff++)
@@ -93,13 +95,13 @@ struct offsets_t* offsets_append_array(struct offsets_t *dest, uint64_t *src, in
     int idxOff, nElt;
 
     if (!dest || !src || n <= 0) {
-        fprintf(stderr, "error: offsets_append_array(): dest or src not set\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: offsets_append_array(): dest or src not set\n");
         return NULL;
     }
 
     dest = offsets_realloc(dest, dest->used + n);
     if (!dest) {
-        fprintf(stderr, "error: offsets_append_array(): failed allocating enough memory for dest\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: offsets_append_array(): failed allocating enough memory for dest\n");
         return NULL;
     }
 

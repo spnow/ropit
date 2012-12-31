@@ -66,7 +66,7 @@ char* GetSectionTypeName (int type) {
 void elf_header_print_info (Elf32_Ehdr *elf_header)
 {
     if (!elf_header)
-        fprintf(stderr, "Error: No elf header\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: No elf header\n");
     else
     {
         printf("[+] Elf header size      : %d\n", elf_header->e_ehsize);
@@ -93,6 +93,7 @@ void elf_header_print_section_info (char *binaryName)
     // number of spaces to print
     size_t numSpaces, iSpace;
 	FILE *fp;
+    ELF_FILE *elf_file;
 	Elf32_Ehdr *elfHeader;
 	Elf32_Shdr *sectionsHeadersTable;
     Elf32_Shdr *sectionNamesTableHeader;
@@ -106,26 +107,31 @@ void elf_header_print_section_info (char *binaryName)
 		return;
 
     // create filemap
-	fmap = filemap_create (fp);
+	fmap = filemap_create (binaryName);
 	if (!fmap)
 		return;
 
+    // load file
+    elf_file = ElfLoad (binaryName);
+	if(!elf_file)
+		return;
+
 	// get elf header
-	elfHeader = ElfGetHeader (fp);
+	elfHeader = ElfGetHeader (elf_file);
 	if(!elfHeader)
 		return;
 		
 	// get sections headers
 	sectionsHeadersTable = ElfGetSectionHeadersTable (fp);
 	if (!sectionsHeadersTable) {
-	    fprintf(stderr, "Error: elf_section_names_print: No section headers table\n");
+	    debug_printf (MESSAGE_ERROR, stderr, "error: elf_section_names_print: No section headers table\n");
 	    return;
 	}
 	
     // get section names table
 	sectionNamesTable = ElfGetSectionNamesTable (fp);
     if (!sectionNamesTable) {
-        fprintf(stderr, "Error: elf_section_names_print: No section names table\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: elf_section_names_print: No section names table\n");
         return;
     }
 

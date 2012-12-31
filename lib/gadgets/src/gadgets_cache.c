@@ -37,7 +37,7 @@ int gadget_cache_fcheck (FILE *fp)
     fseek(fp, 0, SEEK_END);
     fsize = ftell(fp);
     if (fsize <= 0) {
-        fprintf (stderr, "error: gadget_cache_fcheck(): fsize is NULL\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fcheck(): fsize is NULL\n");
         return 0;
     }
     // rewind
@@ -51,7 +51,7 @@ int gadget_cache_fcheck (FILE *fp)
     base = file_to_host_order_by_size(base, sizeof(base));
     // check for fp error or end-of-file
     if (ferror(fp) || feof(fp)) {
-        fprintf (stderr, "error: gadget_cache_fcheck(): Failed reading base address\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fcheck(): Failed reading base address\n");
         check = ERR_GADGET_CACHE_FILE_INVALID;
     }
 
@@ -67,7 +67,7 @@ int gadget_cache_fcheck (FILE *fp)
         fread(&(file.len_bytes), sizeof(file.len_bytes), 1, fp);
         host.len_bytes = file_to_host_order_by_size(file.len_bytes, sizeof(file.len_bytes));
         if (host.len_bytes >= fsize) {
-            fprintf (stderr, "error: gadget_cache_fcheck(): len_bytes > fsize\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fcheck(): len_bytes > fsize\n");
             check = ERR_GADGET_CACHE_FILE_INVALID;
             break;
         }
@@ -78,10 +78,11 @@ int gadget_cache_fcheck (FILE *fp)
         fseek(fp, host.len_bytes, SEEK_CUR);
 
         // repr
+        /*
         fread(&(file.len_repr), sizeof(file.len_repr), 1, fp);
         host.len_repr = file_to_host_order_by_size(file.len_repr, sizeof(file.len_repr));
         if (host.len_repr >= fsize) {
-            fprintf (stderr, "error: gadget_cache_fcheck(): len_repr > fsize\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fcheck(): len_repr > fsize\n");
             check = ERR_GADGET_CACHE_FILE_INVALID;
             break;
         }
@@ -97,10 +98,11 @@ int gadget_cache_fcheck (FILE *fp)
                 break;
         }
         if (host.len_repr != sz_read) {
-            fprintf (stderr, "error: gadget_cache_fcheck(): Failed at offset %d, strlen(repr) != len_repr, %d != %d\n", ftell(fp), sz_read, host.len_repr);
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fcheck(): Failed at offset %d, strlen(repr) != len_repr, %d != %d\n", ftell(fp), sz_read, host.len_repr);
             check = ERR_GADGET_CACHE_FILE_INVALID;
             break;
         }
+        //*/
     }
 
     return check != ERR_GADGET_CACHE_FILE_INVALID ? 1 : 0;
@@ -118,7 +120,7 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
 
     //
     if (!plugin || !fp || !cache) {
-        fprintf (stderr, "error: gadget_cache_fwrite(): Bad parameter(s)\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fwrite(): Bad parameter(s)\n");
         return ERR_GADGET_CACHE_UNDEFINED;
     }
 
@@ -137,13 +139,13 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
     for (idx_cache = count_gadgets = 0; idx_cache < cache_get_size(cache); idx_cache++) {
         // check for fp error or end-of-file
         if (ferror(fp) || feof(fp)) {
-            fprintf (stderr, "error: gadget_cache_fwrite(): fp error\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fwrite(): fp error\n");
             break;
         }
         // get a cached element
         cached = cache_get(cache, idx_cache);
         if (!cached) {
-            fprintf (stderr, "error: gadget_cache_fwrite(): cache is NULL\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fwrite(): cache is NULL\n");
             continue;
         }
         count_gadgets++;
@@ -165,6 +167,7 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
         printf("len_bytes: %d - %x\n", cached->len_bytes, cached->len_bytes);
 #endif
         // write repr
+        /*
         sz_buf = cached->len_repr;
         if (cached->repr == NULL || sz_buf < 0)
             sz_buf = 0;
@@ -177,6 +180,7 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
 #ifdef _DEBUG
         printf("len_repr: %d - %x\n\n", cached->len_repr, cached->len_repr);
 #endif
+        //*/
     }
 
     return count_gadgets;
@@ -190,7 +194,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
     struct gadget_t *cached, *gadget;
 
     if (!fp || !cache || n_read <= 0) {
-        fprintf (stderr, "error: gadget_cache_fread(): Cache is undefined\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Cache is undefined\n");
         return ERR_GADGET_CACHE_UNDEFINED;
     }
 
@@ -198,7 +202,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
     if (!*cache) {
         *cache = cache_new(n_read);
         if (!*cache) {
-            fprintf (stderr, "error: gadget_cache_fread(): Cache failed alloc\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Cache failed alloc\n");
             return 0;
         }
 
@@ -217,13 +221,13 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
     for (idx_cache = count_gadgets = 0; idx_cache < cache_get_size(*cache); idx_cache++) {
         // check for fp error or end-of-file
         if (feof(fp) || ferror(fp)) {
-            fprintf (stderr, "error: gadget_cache_fread(): EOL\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): EOL\n");
             break;
         }
         // get a cached element
         cached = cache_get(*cache, idx_cache);
         if (!cached) {
-            fprintf (stderr, "error: gadget_cache_fread(): Failed getting cached gadget\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Failed getting cached gadget\n");
             continue;
         }
         count_gadgets++;
@@ -235,7 +239,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
         bRead = fread(&(cached->address), sizeof(cached->address), 1, fp);
         // check for fp error or end-of-file
         if (ferror(fp) || feof(fp)) {
-            fprintf (stderr, "error: gadget_cache_fread(): Failed reading address\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Failed reading address\n");
             break;
         }
         cached->address = file_to_host_order_by_size(cached->address, sizeof(cached->address));
@@ -249,7 +253,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
         bRead = fread(&(cached->len_bytes), sizeof(cached->len_bytes), 1, fp);
         // check for fp error or end-of-file
         if (ferror(fp) || feof(fp)) {
-            fprintf (stderr, "error: gadget_cache_fread(): Failed reading len_bytes\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Failed reading len_bytes\n");
             break;
         }
         cached->len_bytes = file_to_host_order_by_size((uint16_t)cached->len_bytes, sizeof(cached->len_bytes));
@@ -264,7 +268,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
             bRead = fread(cached->bytes, sizeof(*cached->bytes), cached->len_bytes, fp);
             // check for fp error or end-of-file
             if (ferror(fp) || feof(fp)) {
-                fprintf (stderr, "error: gadget_cache_fread(): Failed reading bytes\n");
+                debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Failed reading bytes\n");
                 break;
             }
         }
@@ -272,13 +276,15 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
         printf("bRead: %d\n", bRead);
         printf("ftell(fp): %d\n", ftell(fp));
         printf("---------\n");
+
         // read repr
         printf("sizeof(len_repr): %lu\n", sizeof(cached->len_repr));
 #endif
+        /*
         bRead = fread(&(cached->len_repr), sizeof(cached->len_repr), 1, fp);
         // check for fp error or end-of-file
         if (ferror(fp) || feof(fp)) {
-            fprintf (stderr, "error: gadget_cache_fread(): Failed reading len repr\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Failed reading len repr\n");
             break;
         }
         cached->len_repr = file_to_host_order_by_size((uint16_t)cached->len_repr, sizeof(cached->len_repr));
@@ -293,7 +299,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
             bRead = fread(cached->repr, sizeof(*cached->repr), cached->len_repr, fp);
             // check for fp error or end-of-file
             if (ferror(fp) || feof(fp)) {
-                fprintf (stderr, "error: gadget_cache_fread(): Failed reading repr\n");
+                debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fread(): Failed reading repr\n");
                 gadget_show(cached);
                 break;
             }
@@ -302,6 +308,7 @@ int gadget_cache_fread (FILE *fp, struct cache_t **cache, int n_read)
         printf("bRead: %d\n", bRead);
         printf("ftell(fp): %d\n\n", ftell(fp));
 #endif
+        //*/
     }
 
     return count_gadgets;
@@ -316,16 +323,17 @@ int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
     struct gadget_t *cached;
     // base address
     uint64_t base;
+    int retcode;
 
     if (!fp_in || !fp_out) {
-        fprintf(stderr, "error: gadget_cache_file_fshow(): Bad parameter(s)\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_file_fshow(): Bad parameter(s)\n");
         return ERR_GADGET_CACHE_FILE_UNDEFINED;
     }
 
     // if file is not valid
     // then do not do anything else
     if (gadget_cache_fcheck(fp_in) == 0) {
-        fprintf(stderr, "error: gadget_cache_file_fshow(): Cache file is invalid\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_file_fshow(): Cache file is invalid\n");
         return ERR_GADGET_CACHE_FILE_INVALID;
     }
 
@@ -345,19 +353,20 @@ int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
     while (gadget_cache_fread(fp_in, &cache, 1024) != 0) {
         for (idx_cache = 0; idx_cache < cache_get_size(cache); idx_cache++) {
             cached = cache_get(cache, idx_cache);
-            if (!cached || cached->repr == NULL)
+            if (!cached)
                 continue;
 
+            retcode = 0;
             if (flags & GADGET_CACHE_LINE)
-                gadget_output_format_line (fp_out, cached, flags & GADGET_CACHE_COLOR);
+                retcode = gadget_output_format_line (fp_out, cached, flags & GADGET_CACHE_COLOR);
             else if (flags & GADGET_CACHE_STACK)
-                gadget_output_format_stack (fp_out, cached, flags & GADGET_CACHE_COLOR);
-
-            count_gadgets++;
+                retcode = gadget_output_format_stack (fp_out, cached, flags & GADGET_CACHE_COLOR);
+            if (retcode > 0)
+                count_gadgets += 1;
         }
         // check for fp error or end-of-file
         if (ferror(fp_in) || feof(fp_in)) {
-            fprintf (stderr, "error: gadget_cache_fshow(): EOL\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_fshow(): EOL\n");
             break;
         }
     }
@@ -372,14 +381,14 @@ struct gadget_cache_queue_t *gadget_cache_queue_init (struct gadget_cache_queue_
     int retcode;
 
     if (!queue) {
-        fprintf (stderr, "error: gadget_cache_queue_init (): Bad parameter\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_init (): Bad parameter\n");
         return NULL;
     }
 
     if (!*queue) {
         *queue = calloc(sizeof(**queue), 1);
         if (!*queue) {
-            fprintf (stderr, "error: gadget_cache_queue_init (): Gadget queue allocation failed\n");
+            debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_init (): Gadget queue allocation failed\n");
             return NULL;
         }
     }
@@ -390,14 +399,14 @@ struct gadget_cache_queue_t *gadget_cache_queue_init (struct gadget_cache_queue_
     // init semaphore
     retcode = sem_init(&(*queue)->queue_sem, 0, 0);
     if (retcode != 0) {
-        fprintf (stderr, "error: gadget_cache_queue_init(): queue semaphore init failed\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_init(): queue semaphore init failed\n");
         return NULL;
     }
 
     // init mutexes
     retcode = pthread_mutex_init(&(*queue)->queue_mutex, NULL);
     if (retcode != 0) {
-        fprintf (stderr, "error: gadget_cache_queue_init(): queue mutex init failed\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_init(): queue mutex init failed\n");
         return NULL;
     }
 
@@ -410,7 +419,7 @@ struct gadget_cache_queue_t *gadget_cache_queue_add (struct gadget_cache_queue_t
 
     retcode = queue_push (&queue->caches, cache);
     if (!retcode) {
-        fprintf (stderr, "error: gadget_cache_queue_add(): queue push failed\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_add(): queue push failed\n");
         return NULL;
     }
 
@@ -428,12 +437,12 @@ int gadget_cache_queue_fwrite_worker (struct gadget_cache_queue_t *queue)
     struct gadget_plugin_t *plugin;
 
     if (!queue) {
-        fprintf (stderr, "error: gadget_cache_queue_fwrite_worker(): Bad parameter\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_fwrite_worker(): Bad parameter\n");
         return NULL;
     }
 
     if (!queue->file) {
-        fprintf (stderr, "error: gadget_cache_queue_fwrite_worker(): File is NULL\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_fwrite_worker(): File is NULL\n");
         return NULL;
     }
 
@@ -442,7 +451,7 @@ int gadget_cache_queue_fwrite_worker (struct gadget_cache_queue_t *queue)
 
     cache = queue_pop (&queue->caches);
     if (!cache) {
-        fprintf (stderr, "error: gadget_cache_queue_fwrite_worker(): queue_pop() failed\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_cache_queue_fwrite_worker(): queue_pop() failed\n");
         return -1;
     }
 

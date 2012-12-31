@@ -24,9 +24,11 @@ int gadget_output_format_stack (FILE *fp_out, struct gadget_t *gadget, int color
     int len;
     uint64_t addr;
     x86_insn_t insn;         /* instruction */
+    //
+    int n_disasm;
 
     if (!fp_out || !gadget) {
-        fprintf (stderr, "error: gadget_output_format_stack(): Bad parameter(s)\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_output_format_stack(): Bad parameter(s)\n");
         return -1;
     }
 
@@ -37,8 +39,10 @@ int gadget_output_format_stack (FILE *fp_out, struct gadget_t *gadget, int color
     x86_init (opt_none, NULL, NULL);
     while (bytes < (gadget->bytes + gadget->len_bytes)) {
         sz_inst = x86_disasm (bytes, len, 0, 0, &insn);
-        if (sz_inst > 0)
+        if (sz_inst > 0) {
             len_disasm = x86_format_insn(&insn, line, len_line, intel_syntax);
+            n_disasm++;
+        }
         else
             sz_inst = 0;
         x86_oplist_free(&insn);
@@ -57,9 +61,10 @@ int gadget_output_format_stack (FILE *fp_out, struct gadget_t *gadget, int color
     }
     x86_cleanup();
 
-    fprintf (fp_out, "\n");
+    if (gadget->len_bytes)
+        fprintf (fp_out, "\n");
 
-    return 0;
+    return n_disasm;
 }
 
 /* formatting gadget as line:
@@ -78,9 +83,11 @@ int gadget_output_format_line (FILE *fp_out, struct gadget_t *gadget, int color)
     int len;
     uint64_t addr;
     x86_insn_t insn;         /* instruction */
+    //
+    int n_disasm;
 
     if (!fp_out || !gadget) {
-        fprintf (stderr, "error: gadget_output_format_stack(): Bad parameter(s)\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: gadget_output_format_stack(): Bad parameter(s)\n");
         return -1;
     }
 
@@ -88,11 +95,14 @@ int gadget_output_format_line (FILE *fp_out, struct gadget_t *gadget, int color)
     len = gadget->len_bytes;
     addr = gadget->address;
 
+    n_disasm = 0;
     x86_init (opt_none, NULL, NULL);
     while (bytes < (gadget->bytes + gadget->len_bytes)) {
         sz_inst = x86_disasm (bytes, len, 0, 0, &insn);
-        if (sz_inst > 0)
+        if (sz_inst > 0) {
             len_disasm = x86_format_insn(&insn, line, len_line, intel_syntax);
+            n_disasm++;
+        }
         else
             sz_inst = 0;
         x86_oplist_free(&insn);
@@ -118,8 +128,9 @@ int gadget_output_format_line (FILE *fp_out, struct gadget_t *gadget, int color)
     }
     x86_cleanup();
 
-    fprintf (fp_out, "\n");
+    if (gadget->len_bytes)
+        fprintf (fp_out, "\n");
 
-    return 0;
+    return n_disasm;
 }
 

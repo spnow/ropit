@@ -60,31 +60,16 @@ int ElfHeaderCheckValidity(Elf32_Ehdr *elfHeader) {
 
 Elf32_Ehdr* ElfGetHeaderFromFileRaw(char *filename) {
     size_t offsetFile, szFile, found;
-    FILE *fp;
     Elf32_Ehdr *elfHeader;
     struct filemap_t *fmap;
 
     if (!filename)
         return NULL;
 
-    // open file
-    fp = fopen(filename, "r");
-    if (!fp) {
-        fprintf(stderr, "ElfGetHeaderFromFileRaw(): File doesn't exist\n");
-        return NULL;
-    }
-    
-    // get file size
-    fseek(fp, 0, SEEK_END);
-    szFile = ftell(fp);
-    fseek(fp, 0, SEEK_SET);
-
     // create filemap
-    fmap = filemap_create(fp);
-    if (!fmap) {
-        fclose(fp);
+    fmap = filemap_create(filename);
+    if (!fmap)
         return NULL;
-    }
 
     // search ELF header
     for (offsetFile = 0, found = 0; offsetFile < szFile; offsetFile++) {
@@ -108,13 +93,12 @@ Elf32_Ehdr* ElfGetHeaderFromFileRaw(char *filename) {
     }
 
     // clean up
-    fclose(fp);
     filemap_destroy(&fmap);
 
     if (ElfHeaderCheckValidity(elfHeader) > 0)
         return elfHeader;
     else {
-        fprintf(stderr, "ElfGetHeaderFromFileRaw(): Invalid ELF header\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetHeaderFromFileRaw(): Invalid ELF header\n");
         free(elfHeader);
         return NULL;
     }
@@ -157,7 +141,7 @@ struct data_t* ElfDumpProgramSegments(struct filemap_t *fmap, Elf32_Ehdr *elfHea
     printf("segments total size: %lu\n", segments->szData);
 
     if (fmap->map + segments->szData >= fmap->map + fmap->szMap) {
-        fprintf(stderr, "ElfDumpProgramSegments: Offset farther than actual file size\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfDumpProgramSegments: Offset farther than actual file size\n");
         return NULL;
     }
 
@@ -287,7 +271,7 @@ struct data_t* ElfDumpSections(struct filemap_t *fmap, Elf32_Ehdr *elfHeader) {
     printf("sections total size: %lu\n", sections->szData);
 
     if (fmap->map + sections->szData >= fmap->map + fmap->szMap) {
-        fprintf(stderr, "ElfDumpSections(): Offset farther than actual file size\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfDumpSections(): Offset farther than actual file size\n");
         return NULL;
     }
 
@@ -604,7 +588,6 @@ void ElfShowSectionHeaders (Elf32_Shdr *sectionHeaders, size_t nHeaders) {
 }
 
 int main(int argc, char *argv[]) {
-    FILE *fp;
     struct filemap_t *fmap;
     Elf32_Ehdr *elfHeader;
     Elf32_Phdr *programHeaders;
@@ -612,27 +595,20 @@ int main(int argc, char *argv[]) {
     struct data_t *segments, *sections;
 
     if (argc < 3) {
-        fprintf(stderr, "Usage: %s file output\n", argv[0]);
-        exit(1);
-    }
-
-    // open file
-    fp = fopen(argv[1], "r");
-    if (!fp) {
-        fprintf(stderr, "File does not exist\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Usage: %s file output\n", argv[0]);
         exit(1);
     }
 
     // carve ELF file header
     elfHeader = ElfGetHeaderFromFileRaw(argv[1]);
     if (!elfHeader) {
-        fprintf(stderr, "Couldn't find an ELF file to carve\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Couldn't find an ELF file to carve\n");
         exit(1);
     }
 
     //*
     if (elfHeader->e_machine != EM_386) {
-        fprintf(stderr, "Only x86 architecture supported\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Only x86 architecture supported\n");
         exit(1);
     }
     //*/
@@ -641,34 +617,33 @@ int main(int argc, char *argv[]) {
     ElfShowElfHeader(elfHeader);
 
     // create filemap
-    fmap = filemap_create(fp);
+    fmap = filemap_create(argv[1]);
     if (!fmap)
         exit(1);
 
     programHeaders = ElfGetProgramHeadersUsingElfHeader(fmap, elfHeader);
     if (!programHeaders) {
-        fprintf(stderr, "No program headers\n");
+        debug_printf (MESSAGE_ERROR, stderr, "No program headers\n");
     }
     ElfShowProgramHeaders(programHeaders, elfHeader->e_phnum);
 
     sectionHeaders = ElfGetSectionHeadersUsingElfHeader(fmap, elfHeader);
     if (!sectionHeaders) {
-        fprintf(stderr, "No section headers\n");
+        debug_printf (MESSAGE_ERROR, stderr, "No section headers\n");
     }
     ElfShowSectionHeaders (sectionHeaders, elfHeader->e_shnum);
 
     segments = ElfDumpProgramSegments(fmap, elfHeader);
     if (!segments) {
-        fprintf(stderr, "No program segments\n");
+        debug_printf (MESSAGE_ERROR, stderr, "No program segments\n");
     }
     sections = ElfDumpSections(fmap, elfHeader);
     if (!sections) {
-        fprintf(stderr, "No sections\n");
+        debug_printf (MESSAGE_ERROR, stderr, "No sections\n");
     }
 
     // create fixed file
 
-    fclose(fp);
     filemap_destroy(&fmap);
 
     return 0;

@@ -32,12 +32,12 @@ int checkFile (FILE *fp) {
 
 	// file handle check
 	if (!fp) {
-		fprintf(stderr, "Error: Not a valid file handle\n");
+		debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid file handle\n");
 		return -1;
 	}
 	
 	if (PeCheck(fp) == 0 || ElfCheck(fp) == 0) {
-		fprintf(stderr, "Error: Not a valid executable file\n");
+		debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid executable file\n");
 		return -1;
 	}
 
@@ -45,7 +45,7 @@ int checkFile (FILE *fp) {
 
 	check = ElfCheckArchitecture(fp);
 	if (check == 0 || check == -1) {
-		fprintf(stderr, "Error: Architecture isn't supported\n");
+		debug_printf (MESSAGE_ERROR, stderr, "error: Architecture isn't supported\n");
 		return -1;
 	}
 
@@ -57,7 +57,7 @@ int pe_dump (FILE *fp) {
 
 	// file handle check
 	if (!fp) {
-		fprintf(stderr, "Error: Not a valid file handle\n");
+		debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid file handle\n");
 		return -1;
 	}
 
@@ -81,7 +81,7 @@ int elf_dump (char *filename) {
 	// file handle check
     fp = fopen(filename, "r");
 	if (!fp) {
-		fprintf(stderr, "Error: Not a valid file handle\n");
+		debug_printf (MESSAGE_ERROR, stderr, "error: Not a valid file handle\n");
 		return -2;
 	}
 
@@ -106,13 +106,13 @@ int main (int argc, char *argv[]) {
     filename = argv[1];
 	fp = fopen (filename, "rb");
     if (!fp) {
-        fprintf (stderr, "Error: Failed opening %s\n", argv[1]);
+        debug_printf (MESSAGE_ERROR, stderr, "error: Failed opening %s\n", argv[1]);
         return 1;
     }
 
 	// file checks
 	if (checkFile (fp) < 0) {
-		fprintf(stderr, "Error: File analysis failed\n");
+		debug_printf (MESSAGE_ERROR, stderr, "error: File analysis failed\n");
 		exit(1);
 	}
 

@@ -110,7 +110,7 @@ int main (int argc, char *argv[])
     }
 
     if (filename == NULL) {
-        fprintf(stderr, "Error: No file inputted\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: No file inputted\n");
         exit(1);
     }
 

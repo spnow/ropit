@@ -26,14 +26,14 @@ int main (int argc, char *argv[]) {
     FILE *fin, *fout;
 
     if (argc < 5) {
-        fprintf(stderr, "Usage: %s file output offset size\n", argv[0]);
+        debug_printf (MESSAGE_ERROR, stderr, "Usage: %s file output offset size\n", argv[0]);
         exit(1);
     }
 
     // input file
     fin = fopen(argv[1], "r");
     if (!fin) {
-        fprintf(stderr, "Failed opening file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Failed opening file\n");
         exit(1);
     }
 
@@ -51,7 +51,7 @@ int main (int argc, char *argv[]) {
 
     // check
     if (offset > szFile) {
-        fprintf(stderr, "Offset above file size\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Offset above file size\n");
         exit(1);
     }
 
@@ -60,7 +60,7 @@ int main (int argc, char *argv[]) {
     if (!szData)
         offset = strtol(argv[4], &endptr, 16);
     if (!szData) {
-        fprintf(stderr, "Could not get size to dump\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Could not get size to dump\n");
         exit(1);
     }
 
@@ -73,14 +73,14 @@ int main (int argc, char *argv[]) {
     // file output
     fout = fopen(argv[2], "w");
     if (!fout) {
-        fprintf(stderr, "Failed creating file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Failed creating file\n");
         exit(1);
     }
 
     // write data out
     bytes = calloc(szData, sizeof(*bytes));
     if (!bytes) {
-        fprintf(stderr, "Failed allocating buffer\n");
+        debug_printf (MESSAGE_ERROR, stderr, "Failed allocating buffer\n");
         exit(1);
     }
     fseek(fin, offset, SEEK_SET);

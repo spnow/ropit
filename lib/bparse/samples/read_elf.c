@@ -39,13 +39,13 @@ int main (int argc, char *argv[])
 
     // check elf file
     if(!ElfCheck(fp)) {
-        fprintf(stderr, "Error: Not an ELF file\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Not an ELF file\n");
         exit (1);
     }
 
     check = ElfCheckArchitecture(fp);
     if (check == 0 || check == -1) {
-        fprintf(stderr, "Error: Architecture isn't taken into account\n");
+        debug_printf (MESSAGE_ERROR, stderr, "error: Architecture isn't taken into account\n");
         exit (1);
     }
 

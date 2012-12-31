@@ -117,31 +117,31 @@ Elf32_Phdr* ElfGetProgramHeadersTable (ELF_FILE *elffile) {
 	Elf32_Phdr *programHeadersTable;
 
     if (!elffile) {
-        fprintf(stderr, "ElfGetProgramHeadersTable(): Given ELF_FILE pointer is bad\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetProgramHeadersTable(): Given ELF_FILE pointer is bad\n");
         return NULL;
     }
     if (!elffile->fp) {
-        fprintf(stderr, "ElfGetProgramHeadersTable(): File pointer is bad\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetProgramHeadersTable(): File pointer is bad\n");
         return NULL;
     }
 
 	// create filemap
 	fmap = filemap_create (elffile->filename);
 	if (!fmap) {
-        fprintf(stderr, "ElfGetProgramHeadersTable(): Failed file mapping\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetProgramHeadersTable(): Failed file mapping\n");
 		return NULL;
     }
 
 	// get elf header
 	elfHeader = ElfGetHeader(elffile);
 	if (!elfHeader) {
-        fprintf(stderr, "ElfGetProgramHeadersTable(): Failed getting ELF header\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetProgramHeadersTable(): Failed getting ELF header\n");
 		return NULL;
     }
 
 	// if no program headers table
 	if (elfHeader->e_phnum == 0 || elfHeader->e_phoff == 0) {
-        fprintf(stderr, "ElfGetProgramHeadersTable(): No program segments\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetProgramHeadersTable(): No program segments\n");
 		return NULL;
     }
     if (elfHeader->e_phoff >= fmap->sz_map)
@@ -159,31 +159,31 @@ Elf32_Shdr* ElfGetSectionHeadersTable (ELF_FILE *elffile) {
 	Elf32_Shdr *sectionsTable;
 
     if (!elffile) {
-        fprintf(stderr, "ElfGetSectionHeadersTable(): Given ELF_FILE pointer is bad\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetSectionHeadersTable(): Given ELF_FILE pointer is bad\n");
         return NULL;
     }
     if (!elffile->fp) {
-        fprintf(stderr, "ElfGetSectionHeadersTable(): File pointer is bad\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetSectionHeadersTable(): File pointer is bad\n");
         return NULL;
     }
 
 	// create filemap
 	fmap = filemap_create (elffile->filename);
 	if (!fmap) {
-        fprintf(stderr, "ElfGetSectionHeadersTable(): Failed file mapping\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetSectionHeadersTable(): Failed file mapping\n");
 		return NULL;
     }
 	
 	// get elf header
 	elfHeader = ElfGetHeader(elffile);
 	if (!elfHeader) {
-        fprintf(stderr, "ElfGetSectionHeadersTable(): Failed getting ELF header\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetSectionHeadersTable(): Failed getting ELF header\n");
 		return NULL;
     }
 	
 	// if no section headers table
 	if (elfHeader->e_shnum == 0 || elfHeader->e_shoff == 0) {
-        fprintf(stderr, "ElfGetSectionHeadersTable(): No sections\n");
+        debug_printf (MESSAGE_ERROR, stderr, "ElfGetSectionHeadersTable(): No sections\n");
 		return NULL;
     }
     if (elfHeader->e_shoff >= fmap->sz_map)
