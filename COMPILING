@@ -19,9 +19,9 @@ sudo apt-get install libbz2-dev
 - libfall4c:
 git clone git://github.com/m101/libfall4c.git
 cd libfall4c
-./build && cd build && make && sudo make install && cd ..
+./build && cd build && sudo make install && cd ..
 
 == Compilation ==
 
-./build.sh && cmake .. && make
+./build.sh
 
