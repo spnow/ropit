@@ -2,3 +2,10 @@ ROPit v0.1 alpha (13/III/2011):
 - Find all instructions using some kind of backtracking algorithm
 - Construct gadgets from found instructions
 - PE format and raw files supported ONLY
+
+ROPit v0.1 alpha 3 (01/I/2013)
+- options parsing
+- output coloring and formating
+- way faster and less buggy than alpha 2
+- verbosity level
+
