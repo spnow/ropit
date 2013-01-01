@@ -318,7 +318,7 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
             sz_inst = x86_disasm(start, len - (start - bytes), 0, 0, &insn);
             x86_oplist_free(&insn);
 
-            if (!sz_inst) {
+            if (sz_inst <= 0) {
                 // printf("not found inst\n");
                 n_backtrack_bytes++;
             }
@@ -327,21 +327,26 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
                 n_backtrack_bytes = 0;
                 n_backtrack_inst++;
 
-                // check gadget validity
-                gadget_start = --start;
                 valid_gadget = 0;
-                while ( bytes <= gadget_start && gadget_start <= bytes + rets[idx_ret] ) {
-                    /* disassemble address */
-                    sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
-                    x86_oplist_free(&insn);
-                    if (sz_inst > 0)
-                        gadget_start += sz_inst;
-                    else
-                        break;
-
-                    if (gadget_start == bytes + rets[idx_ret]) {
-                        valid_gadget = 1;
-                        break;
+                //
+                gadget_start = start;
+                if (gadget_start == bytes + rets[idx_ret])
+                    valid_gadget = 1;
+                else {
+                    // check gadget validity
+                    while (bytes <= gadget_start && gadget_start <= bytes + rets[idx_ret]) {
+                        /* disassemble address */
+                        sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
+                        x86_oplist_free(&insn);
+                        if (sz_inst <= 0)
+                            break;
+                        else {
+                            gadget_start += sz_inst;
+                            if (gadget_start == bytes + rets[idx_ret]) {
+                                valid_gadget = 1;
+                                break;
+                            }
+                        }
                     }
                 }
 
