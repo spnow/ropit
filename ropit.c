@@ -72,7 +72,7 @@ int main (int argc, char *argv[]) {
     else
         fp_out = fopen(config.filename_output, "w");
 
-    count_gadgets = gadget_cache_fshow(fp_cache, fp_out, config.format | config.color);
+    count_gadgets = gadget_cache_fshow(fp_cache, fp_out, config.format | config.color | config.base_address);
 
     printf ("\n== SUMMARY ==\n");
     printf ("Found %d gadgets\n", count_gadgets);

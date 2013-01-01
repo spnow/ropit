@@ -75,6 +75,7 @@ struct ropit_options_t *config_default (struct ropit_options_t *config)
     config->color = 0;
     config->n_threads = 1;
     config->arch = ARCH_X86_32;
+    config->base_address = 0;
 
     return config;
 }
@@ -90,6 +91,7 @@ void parse_options (int argc, char *argv[]) {
         { "format", required_argument, NULL, 'f' },
         { "threads", required_argument, NULL, 'n' },
         { "color", no_argument, NULL, 'c' },
+        { "base", no_argument, NULL, 'b' },
         { "verbose", no_argument, NULL, 'v' },
         { "help", no_argument, NULL, 'h' },
         { 0, 0, 0, 0 }
@@ -103,7 +105,7 @@ void parse_options (int argc, char *argv[]) {
     config_default (&config);
 
     while (option_id >= 0) {
-        option_id = getopt_long (argc, argv, "i:o:t:f:n:cvh", long_options, &option_index);
+        option_id = getopt_long (argc, argv, "i:o:t:f:n:cbvh", long_options, &option_index);
 
         switch (option_id) {
             case 'i':
@@ -135,6 +137,9 @@ void parse_options (int argc, char *argv[]) {
                 break;
             case 'c':
                 config.color = GADGET_CACHE_COLOR;
+                break;
+            case 'b':
+                config.base_address = GADGET_CACHE_BASE;
                 break;
             case 'v':
                 if (config.verbose_level < 3)

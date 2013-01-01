@@ -28,6 +28,7 @@
 #define GADGET_CACHE_COLOR              1
 #define GADGET_CACHE_STACK              2
 #define GADGET_CACHE_LINE               4
+#define GADGET_CACHE_BASE               8
 
 struct gadget_cache_t {
     uint64_t base;

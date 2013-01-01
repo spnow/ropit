@@ -356,6 +356,9 @@ int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
             if (!cached)
                 continue;
 
+            if (flags & GADGET_CACHE_BASE)
+                cached->address += base;
+
             retcode = 0;
             if (flags & GADGET_CACHE_LINE)
                 retcode = gadget_output_format_line (fp_out, cached, flags & GADGET_CACHE_COLOR);

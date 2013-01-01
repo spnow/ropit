@@ -16,6 +16,7 @@ struct ropit_options_t {
     int color;
     int n_threads;
     int arch;
+    int base_address;
 };
 
 extern struct ropit_options_t config;
