@@ -28,16 +28,16 @@ struct gadget_callbacks_t {
     // find branching instructions
     struct offset_t* (*find_branches)(uint8_t *bytes, int nBytes);
     // find gadgets
-    struct offset_t* (*find_gadgets)(uint8_t *bytes, int nBytes);
+    int (*find_gadgets)(uint8_t *bytes, int nBytes);
 };
 
 // find gadgets in ELF file
-struct gadget_t* gadgets_find_in_elf(char *filename);
+int gadgets_find_in_elf(char *filename);
 // find gadgets in PE file
-struct gadget_t* gadgets_find_in_pe(char *filename);
+int gadgets_find_in_pe(char *filename);
 // find gadgets in executable file
-struct gadget_t* gadgets_find_in_executable(char *filename);
+int gadgets_find_in_executable(char *filename);
 // find gadgets in file
-struct gadget_t* gadgets_find_in_file (struct gadget_plugin_t *plugin, char *filename);
+int gadgets_find_in_file (struct gadget_plugin_t *plugin, char *filename);
 
 #endif /* _GADGETS_H_ */

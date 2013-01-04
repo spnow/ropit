@@ -216,101 +216,111 @@ int ropit_pointers_check_pointer_characteristics() {
 }
 
 // find gadgets in ELF file
-struct gadget_t *gadgets_find_in_elf (char *filename) {
+int gadgets_find_in_elf (char *filename) {
     ELF_FILE *elf_file;
     Elf32_Ehdr *elf_header = NULL;
     Elf32_Phdr *program_headers_table;
     int idx_program_segment;
     struct gadget_plugin_t *plugin;
+    int n_gadgets;
+    int retcode;
 
     elf_file = ElfLoad(filename);
     if (!elf_file) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed loading ELF\n");
-        return NULL;
+        return -1;
     }
 
     if (ElfCheckArchitecture (elf_file) == 0) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Architecture not supported\n");
-        ElfUnload(&elf_file);
-        return NULL;
+        goto out_error;
     }
 
     elf_header = ElfGetHeader(elf_file);
     if (!elf_header) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed getting elf_headers\n");
-        return NULL;
+        goto out_error;
     }
 
     // get appropriate plugin
     plugin = gadget_plugin_dispatch (0);
     if (!plugin) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed init gadget plugin\n");
-        return NULL;
+        goto out_error;
     }
 
     // program segments parsing (sections are part of program segments)
     program_headers_table = ElfGetProgramHeadersTable (elf_file);
     if (!program_headers_table) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_elf(): Failed getting Program Headers Table\n");
+        goto out_error;
     }
-    else {
-        for (idx_program_segment = 0; idx_program_segment < elf_header->e_phnum; idx_program_segment++) {
-            if (program_headers_table[idx_program_segment].p_flags & PF_X) {
-                gadgets_find (plugin, elf_file->fmap->map + program_headers_table[idx_program_segment].p_offset,
-                        program_headers_table[idx_program_segment].p_filesz);
+
+    for (idx_program_segment = 0; idx_program_segment < elf_header->e_phnum; idx_program_segment++) {
+        if (program_headers_table[idx_program_segment].p_flags & PF_X) {
+            gadgets_find (plugin, elf_file->fmap->map + program_headers_table[idx_program_segment].p_offset,
+                    program_headers_table[idx_program_segment].p_filesz);
             // base address = program_headers_table[idx_program_segment].p_paddr
-            }
         }
     }
 
-    // gadget_plugin_destroy (&plugin);
     ElfUnload(&elf_file);
 
-    return NULL;
+    return n_gadgets;
+
+out_error:
+    ElfUnload(&elf_file);
+
+    return -1;
 }
 
 // find gadgets in PE file
-struct gadget_t *gadgets_find_in_pe (char *filename) {
+int gadgets_find_in_pe (char *filename) {
     PE_FILE *pefile;
     IMAGE_SECTION_HEADER *section_headers_table;
     IMAGE_NT_HEADERS *nt_header = NULL;
     int idx_section;
     struct gadget_plugin_t *plugin;
+    int n_gadgets;
+    int retcode;
 
     pefile = PeLoad(filename);
     if (!pefile) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed loading PE\n");
-        return NULL;
+        return -1;
     }
 
     if (PeCheckArchitecture (pefile) == 0) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Architecture not supported\n");
-        PeUnload(&pefile);
-        return NULL;
+        goto out_error;
     }
 
     nt_header = PeGetNtHeader(pefile);
     if (!nt_header) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed getting NtHeaders\n");
-        return NULL;
+        goto out_error;
     }
+
     section_headers_table = PeGetSectionHeaderTable(pefile);
     if (!section_headers_table) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed getting Section Headers Table\n");
-        return NULL;
+        goto out_error;
     }
 
     // get appropriate plugin
     plugin = gadget_plugin_dispatch (0);
     if (!plugin) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed init gadget plugin\n");
-        return NULL;
+        goto out_error;
     }
 
+    n_gadgets = 0;
     for (idx_section = 0; idx_section < nt_header->FileHeader.NumberOfSections; idx_section++) {
         if (section_headers_table[idx_section].Characteristics & IMAGE_SCN_MEM_EXECUTE) {
-            gadgets_find(plugin, pefile->fmap->map + section_headers_table[idx_section].PointerToRawData,
+            retcode = gadgets_find(plugin, pefile->fmap->map + section_headers_table[idx_section].PointerToRawData,
                     section_headers_table[idx_section].SizeOfRawData);
+            if (retcode > 0)
+                n_gadgets += retcode;
             // base address = nt_header->OptionalHeader.ImageBase + section_headers_table[idx_section].VirtualAddress
         }
     }
@@ -319,40 +329,47 @@ struct gadget_t *gadgets_find_in_pe (char *filename) {
     // gadget_plugin_destroy (&plugin);
     PeUnload(&pefile);
 
-    return NULL;
+    return n_gadgets;
+
+out_error:
+    PeUnload(&pefile);
+
+    return -1;
 }
 
 // find gadgets in executable file
-struct gadget_t *gadgets_find_in_executable (char *filename) {
+int gadgets_find_in_executable (char *filename)
+{
     FILE *fp;
+    int n_gadgets;
 
     fp = fopen(filename, "r");
     if (!fp)
-        return NULL;
+        return -1;
 
     if (ElfCheck(fp))
-        gadgets_find_in_elf(filename);
+        n_gadgets = gadgets_find_in_elf(filename);
     else if (PeCheck(fp))
-        gadgets_find_in_pe(filename);
-    else
+        n_gadgets = gadgets_find_in_pe(filename);
+    else {
         debug_printf (MESSAGE_ERROR, stderr, "error: %s is not an executable file\n");
+        n_gadgets = -1;
+    }
 
     fclose(fp);
 
-    return NULL;
+    return n_gadgets;
 }
 
 // find gadgets in file
-struct gadget_t *gadgets_find_in_file (struct gadget_plugin_t *plugin, char *filename)
+int gadgets_find_in_file (struct gadget_plugin_t *plugin, char *filename)
 {
-    FILE *fp = NULL;
-    struct filemap_t *fmap = NULL;
+    FILE *fp;
+    struct filemap_t *fmap;
+    int n_gadgets;
 
-    if (!plugin)
-        return NULL;
-
-    if (!filename)
-        return NULL;
+    if (!plugin || !filename)
+        return -1;
 
     fp = fopen(filename, "r");
     if (!fp)
@@ -362,14 +379,14 @@ struct gadget_t *gadgets_find_in_file (struct gadget_plugin_t *plugin, char *fil
     if (!fmap)
         goto gadgets_find_in_file_cleanup;
 
-    plugin->find_gadgets (fmap->map, fmap->sz_map);
+    n_gadgets = plugin->find_gadgets (fmap->map, fmap->sz_map);
 
-    return NULL;
+    return n_gadgets;
 
 gadgets_find_in_file_cleanup:
     fclose(fp);
     filemap_destroy(&fmap);
 
-    return NULL;
+    return -1;
 }
 

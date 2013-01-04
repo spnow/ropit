@@ -12,7 +12,7 @@
 #include "gadgets_cache.h"
 
 struct offsets_t* ropit_x86_find_rets(uint8_t *bytes, int len);
-struct offsets_t* ropit_x86_find_gadgets(uint8_t *bytes, int len);
+int ropit_x86_find_gadgets(uint8_t *bytes, int len);
 
 struct gadget_plugin_t x86_gadget_plugin = {
 	.name = "Intel x86",
@@ -229,7 +229,7 @@ char *ropit_x86_disasm (uint8_t *bytes, int len, int *sz_dis)
 
 #define DISASSEMBLED_SIZE_MAX 1024
 // find valid instructions offsets before ret
-struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets) {
+int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets) {
     int sz_inst;                /* size of instruction */
     x86_insn_t insn;         /* instruction */
     int idx_ret, sz_ret;
@@ -250,6 +250,8 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
     int idx_gadgets, n_gadgets;
     // cache queue
     struct gadget_cache_queue_t *cache_queue;
+    // count
+    int count_gadgets;
 
     // check params
     if (!bytes || len <= 0) {
@@ -308,6 +310,7 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
 
     idx_caches = 0;
     idx_gadgets = 0;
+    count_gadgets = 0;
     for (idx_ret = 0; idx_ret < n_rets; idx_ret++) {
         start = bytes + rets[idx_ret];
 
@@ -351,6 +354,9 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
                 }
 
                 if (valid_gadget == 1) {
+                    //
+                    ++count_gadgets;
+
                     // get ret size
                     sz_ret = x86_disasm(gadget_start, bytes + rets[idx_ret], 0, 0, &insn);
                     x86_oplist_free(&insn);
@@ -442,13 +448,14 @@ struct offsets_t *_ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *ret
 
     fclose (fp_cache);
 
-    return 0;
+    return count_gadgets;
 }
 
 // find valid instructions offsets before ret
-struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
+int ropit_x86_find_gadgets (uint8_t *bytes, int len)
 {
-    struct offsets_t *rets, *instructions;
+    struct offsets_t *rets;
+    int n_gadgets;
 
     if (!bytes || len <= 0) {
         return NULL;
@@ -459,11 +466,10 @@ struct offsets_t *ropit_x86_find_gadgets (uint8_t *bytes, int len)
     if (!rets) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find(): No rets\n");
     }
-    instructions = _ropit_x86_find_gadgets (bytes, len, rets->offsets, rets->used);
+    n_gadgets = _ropit_x86_find_gadgets (bytes, len, rets->offsets, rets->used);
 
     offsets_destroy(&rets);
-    offsets_destroy(&instructions);
 
-    return 0;
+    return n_gadgets;
 }
 
