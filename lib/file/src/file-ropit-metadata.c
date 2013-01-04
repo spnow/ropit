@@ -11,12 +11,17 @@
 // fix metadata byte order
 struct ropit_file_metadata_t* ropit_file_metadata_fix_endianness(struct ropit_file_metadata_t *metadata);
 
-int ropit_file_metadata_check(struct ropit_file_metadata_t *metadata) {
+int ropit_file_metadata_check (struct ropit_file_metadata_t *metadata)
+{
+    uint8_t magic[16];
+
     //
     if (!metadata)
         return -1;
 
-    if (memcmp(metadata->magic, "ROPIT_GADGETS", 13))
+    memset (magic, 0, 16);
+    memcpy (magic, "ROPIT_GADGETS", 13);
+    if (memcmp(metadata->magic, magic, sizeof(metadata->magic)))
         return 0;
 
     // if you're here
@@ -24,14 +29,15 @@ int ropit_file_metadata_check(struct ropit_file_metadata_t *metadata) {
     return 1;
 }
 
-struct ropit_file_metadata_t* ropit_file_metadata_read(FILE *fp) {
+struct ropit_file_metadata_t* ropit_file_metadata_read (FILE *fp)
+{
     struct ropit_file_metadata_t *metadata;
     int soffset;
-    int szHash;
+    int sz_hash;
     //
-    int idxSection;
+    int idx_section;
     // number of readed bytes
-    int nRead;
+    int n_read;
 
     // if not opened
     if (!fp)
@@ -47,49 +53,49 @@ struct ropit_file_metadata_t* ropit_file_metadata_read(FILE *fp) {
 
     //
     soffset = offsetof(struct ropit_file_metadata_t, hash);
-    nRead = fread(metadata, sizeof(uint8_t), soffset, fp);
+    n_read = fread(metadata, sizeof(uint8_t), soffset, fp);
     // fix endianness
     metadata = ropit_file_metadata_fix_endianness(metadata);
 
     // get size of hash (in bytes) depending on hash type
     if (metadata->hashtype == ROPIT_FILE_METADATA_HASHTYPE_MD5)
-        szHash = 32;
+        sz_hash = 32;
     else if (metadata->hashtype == ROPIT_FILE_METADATA_HASHTYPE_SHA1)
-        szHash = 40;
+        sz_hash = 40;
     else
         goto _error;
 
     // room for hash
-    metadata->hash = calloc(sizeof(uint8_t), szHash);
+    metadata->hash = calloc(sizeof(uint8_t), sz_hash);
     if (!metadata->hash)
         goto _error;
     // get hash
-    nRead = fread(metadata->hash, sizeof(uint8_t), szHash, fp);
+    n_read = fread(metadata->hash, sizeof(uint8_t), sz_hash, fp);
 
     // get filename size
-    nRead = fread(&(metadata->szFilename), sizeof(uint16_t), 1, fp);
-    metadata->szFilename = file_to_host_order(metadata->szFilename);
+    n_read = fread(&(metadata->sz_filename), sizeof(uint16_t), 1, fp);
+    metadata->sz_filename = file_to_host_order(metadata->sz_filename);
 
     // get filename
-    metadata->filename = calloc(sizeof(uint8_t), metadata->szFilename);
+    metadata->filename = calloc(sizeof(uint8_t), metadata->sz_filename);
     if (!metadata->filename)
         goto _error;
-    nRead = fread(metadata->filename, sizeof(uint8_t), metadata->szFilename, fp);
+    n_read = fread(metadata->filename, sizeof(uint8_t), metadata->sz_filename, fp);
 
     // get number of sections
-    nRead = fread(&(metadata->n_sections), sizeof(uint16_t), 1, fp);
+    n_read = fread(&(metadata->n_sections), sizeof(uint16_t), 1, fp);
     metadata->n_sections = file_to_host_order(metadata->n_sections);
 
     // get section headers table
     metadata->sheaders = calloc(sizeof(*(metadata->sheaders)), metadata->n_sections);
     if (!metadata->sheaders)
         goto _error;
-    nRead = fread(metadata->sheaders, sizeof(uint8_t), metadata->n_sections, fp);
+    n_read = fread(metadata->sheaders, sizeof(uint8_t), metadata->n_sections, fp);
 
     // fix endianness
-    for (idxSection = 0; idxSection < metadata->n_sections; idxSection++) {
-        metadata->sheaders[idxSection].type = file_to_host_order(metadata->sheaders[idxSection].type);
-        metadata->sheaders[idxSection].nElt = file_to_host_order(metadata->sheaders[idxSection].nElt);
+    for (idx_section = 0; idx_section < metadata->n_sections; idx_section++) {
+        metadata->sheaders[idx_section].type = file_to_host_order(metadata->sheaders[idx_section].type);
+        metadata->sheaders[idx_section].n_elt = file_to_host_order(metadata->sheaders[idx_section].n_elt);
     }
 
     // check metadata
@@ -124,14 +130,15 @@ _error:
 }
 
 // fix metadata byte order
-struct ropit_file_metadata_t* ropit_file_metadata_fix_endianness(struct ropit_file_metadata_t *metadata) {
+struct ropit_file_metadata_t* ropit_file_metadata_fix_endianness (struct ropit_file_metadata_t *metadata)
+{
     if (!metadata)
         return NULL;
 
     // version
-    metadata->versionMinor = host_to_file_order(metadata->versionMinor);
-    metadata->versionMajor = host_to_file_order(metadata->versionMajor);
-    metadata->versionPatch = host_to_file_order(metadata->versionPatch);
+    metadata->version_minor = host_to_file_order(metadata->version_minor);
+    metadata->version_major = host_to_file_order(metadata->version_major);
+    metadata->version_patch = host_to_file_order(metadata->version_patch);
     //
     metadata->arch = host_to_file_order(metadata->arch);
     metadata->arch_flavor = host_to_file_order(metadata->arch_flavor);

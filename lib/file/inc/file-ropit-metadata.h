@@ -12,9 +12,9 @@ struct ropit_file_metadata_t {
     // file identification
     uint8_t magic[16];
     // version
-    uint16_t versionMinor;
-    uint16_t versionMajor;
-    uint16_t versionPatch;
+    uint16_t version_minor;
+    uint16_t version_major;
+    uint16_t version_patch;
     //
     uint16_t arch;
     uint16_t arch_flavor;
@@ -24,7 +24,7 @@ struct ropit_file_metadata_t {
     uint16_t hashtype;
     uint8_t *hash;
     // filename
-    uint16_t szFilename;
+    uint16_t sz_filename;
     uint8_t *filename;
     // number of sections
     uint16_t n_sections;
