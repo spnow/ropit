@@ -127,13 +127,6 @@ void parse_options (int argc, char *argv[]) {
                 break;
             case 'n':
                 config.n_threads = strtol (optarg, NULL, 10);
-                if (config.n_threads == LONG_MIN
-                        || config.n_threads == LONG_MAX
-                        || config.n_threads <= 0
-                        || config.n_threads > 8) {
-                    debug_printf (MESSAGE_ERROR, stderr, "fatal: n_threads should be between 0-8\n");
-                    exit (1);
-                }
                 break;
             case 'c':
                 config.color = GADGET_CACHE_COLOR;
@@ -154,6 +147,17 @@ void parse_options (int argc, char *argv[]) {
         }
     }
 
+    if (config.verbose_level > 0)
+        debug_set_verbose_level (config.verbose_level);
+
+    if (config.n_threads == LONG_MIN
+            || config.n_threads == LONG_MAX
+            || config.n_threads <= 0
+            || config.n_threads > 8) {
+        debug_printf (MESSAGE_ERROR, stderr, "error: n_threads should be between 0-8\n");
+        exit (1);
+    }
+
     if (config.filename_input == NULL) {
         debug_printf (MESSAGE_ERROR, stderr, "error: --input not defined\n");
         exit(-1);
@@ -163,8 +167,5 @@ void parse_options (int argc, char *argv[]) {
         debug_printf (MESSAGE_ERROR, stderr, "fatal: format should be either 'stack' or 'line'\n");
         exit (1);
     }
-
-    if (config.verbose_level > 0)
-        debug_set_verbose_level (config.verbose_level);
 }
 
