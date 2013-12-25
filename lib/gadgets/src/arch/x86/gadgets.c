@@ -373,41 +373,6 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
                     }
                     memcpy(gadgets[idx_gadgets].bytes, start, gadgets[idx_gadgets].len_bytes);
 
-                    /*
-                    // construct repr
-                    gadget_start = start;
-                    gadgets[idx_gadgets].len_repr = 0;
-                    sz_dst = gadgets[idx_gadgets].sz_repr;
-                    gadgets[idx_gadgets].repr[0] = '\0';
-                    while ( start <= gadget_start && gadget_start <= bytes + rets[idx_ret] ) {
-                        /  disassemble address
-                        sz_inst = x86_disasm(gadget_start, gadget_start - bytes, 0, 0, &insn);
-                        gadget_start += sz_inst;
-                        if (sz_inst <= 0) {
-                            x86_oplist_free(&insn);
-                            break;
-                        }
-                        else {
-                            len_disasm = x86_format_insn(&insn, disassembled, DISASSEMBLED_SIZE_MAX, intel_syntax);
-                            x86_oplist_free(&insn);
-                            str_replace_chr(disassembled, len_disasm, '\t', ' ');
-
-                            if (sz_dst <= 0)
-                                continue;
-
-                            // copy disassembly
-                            strncat (gadgets[idx_gadgets].repr + gadgets[idx_gadgets].len_repr, disassembled, sz_dst);
-                            gadgets[idx_gadgets].len_repr += len_disasm;
-                            sz_dst -= len_disasm;
-
-                            // copy separation
-                            strncat (gadgets[idx_gadgets].repr + gadgets[idx_gadgets].len_repr, " # ", sz_dst);
-                            gadgets[idx_gadgets].len_repr += 3;
-                            sz_dst -= 3;
-                        }
-                    }
-                    //*/
-
                     if (cache_add (&(caches[idx_caches]), &(gadgets[idx_gadgets])) == -ERR_CACHE_FULL) {
                         gadget_cache_queue_add (cache_queue, &(caches[idx_caches]));
                         gadget_cache_queue_fwrite_worker (cache_queue);
@@ -442,13 +407,11 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
         free(caches[idx_caches].objects);
     free(caches);
 
-    //*
     for (idx_gadgets = 0; idx_gadgets < n_gadgets; idx_gadgets++) {
         // gadget_free(&(gadgets[idx_gadgets]));
         // free (gadgets[idx_gadgets].repr);
         free (gadgets[idx_gadgets].bytes);
     }
-    //*/
     free(gadgets);
 
     gadget_cache_queue_destroy (&cache_queue);
