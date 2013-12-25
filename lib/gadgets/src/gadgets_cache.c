@@ -114,7 +114,7 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
 {
     int idx_cache, count_gadgets;
     struct gadget_t *cached, file;
-    uint64_t base;
+    uint64_t base_addr;
     int16_t sz_buf;
     static int base_written = 0;
 
@@ -126,9 +126,9 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
 
     // write base address
     if (base_written == 0) {
-        base = plugin->base_addr;
-        base = file_to_host_order_by_size(base, sizeof(base));
-        fwrite(&base, sizeof(base), 1, fp);
+        base_addr = plugin->base_addr;
+        base_addr = host_to_file_order_by_size(base_addr, sizeof(base_addr));
+        fwrite(&base_addr, sizeof(base_addr), 1, fp);
         base_written = 1;
     }
 
@@ -322,7 +322,7 @@ int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
     struct cache_t *cache;
     struct gadget_t *cached;
     // base address
-    uint64_t base;
+    uint64_t base_addr;
     int retcode;
 
     if (!fp_in || !fp_out) {
@@ -344,9 +344,9 @@ int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
     fseek(fp_in, 0, SEEK_SET);
 
     // get base address
-    fread(&base, sizeof(base), 1, fp_in);
-    base = file_to_host_order_by_size(base, sizeof(base));
-    printf("base address: 0x%08llx\n", base);
+    fread(&base_addr, sizeof(base_addr), 1, fp_in);
+    base_addr = file_to_host_order_by_size(base_addr, sizeof(base_addr));
+    printf("base address: 0x%08llx\n", base_addr);
 
     count_gadgets = 0;
     cache = NULL;
@@ -357,7 +357,7 @@ int gadget_cache_fshow (FILE *fp_in, FILE *fp_out, int flags)
                 continue;
 
             if (flags & GADGET_CACHE_BASE)
-                cached->address += base;
+                cached->address += base_addr;
 
             retcode = 0;
             if (flags & GADGET_CACHE_LINE)
