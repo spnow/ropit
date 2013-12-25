@@ -9,3 +9,11 @@ ROPit v0.1 alpha 3 (01/I/2013)
 - way faster and less buggy than alpha 2
 - verbosity level
 
+ROPit v0.1 alpha 4 (25/XII/2013)
+- Some optimisations (around 10-30% speed increase)
+- Mostly bug fixing:
+	- Tool was broken : Bad addresses due to bad base address
+	- Verbosity level not properly taken into account in some code
+	- Bad instructions counting in a gadget so gadgets were missed
+- The tool is working, it should correctly find gadgets and their proper address
+

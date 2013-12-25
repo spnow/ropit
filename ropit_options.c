@@ -31,7 +31,7 @@ int ropit_option_file_type (int random) {
 void banner ()
 {
     printf("==========================================\n");
-    printf("==      ROPit v0.1 alpha 3 by m_101     ==\n");
+    printf("==      ROPit v0.1 alpha 4 by m_101     ==\n");
     printf("==  site: http://binholic.blogspot.com/ ==\n");
     printf("==========================================\n");
 }
