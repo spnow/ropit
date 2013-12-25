@@ -480,7 +480,7 @@ struct gadget_cache_queue_t *gadget_cache_queue_destroy (struct gadget_cache_que
     pthread_mutex_destroy (&(*queue)->queue_mutex);
     // destroy semaphore
     sem_destroy (&(*queue)->queue_sem);
-    queue_destroy (&(*queue)->caches, NULL);
+    queue_destroy (&(*queue)->caches);
     free (*queue);
     *queue = NULL;
 }
