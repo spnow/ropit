@@ -328,7 +328,6 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
             else {
                 // printf("found inst\n");
                 n_backtrack_bytes = 0;
-                n_backtrack_inst++;
 
                 valid_gadget = 0;
                 //
@@ -336,6 +335,7 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
                 if (gadget_start == bytes + rets[idx_ret])
                     valid_gadget = 1;
                 else {
+                    n_backtrack_inst = 0;
                     // check gadget validity
                     while (bytes <= gadget_start && gadget_start <= bytes + rets[idx_ret]) {
                         /* disassemble address */
@@ -344,6 +344,7 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
                         if (sz_inst <= 0)
                             break;
                         else {
+                            n_backtrack_inst++;
                             gadget_start += sz_inst;
                             if (gadget_start == bytes + rets[idx_ret]) {
                                 valid_gadget = 1;
