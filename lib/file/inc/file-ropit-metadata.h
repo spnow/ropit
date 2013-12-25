@@ -32,7 +32,8 @@ struct ropit_file_metadata_t {
 };
 
 // metadata
-struct ropit_file_metadata_t* ropit_file_metadata_read(FILE *fp);
-void ropit_file_metadata_destroy(struct ropit_file_metadata_t **metadata);
+struct ropit_file_metadata_t *ropit_file_metadata_fread (FILE *fp, struct ropit_file_metadata_t *metadata);
+struct ropit_file_metadata_t *ropit_file_metadata_fwrite (FILE *fp, struct ropit_file_metadata_t *metadata);
+void ropit_file_metadata_destroy (struct ropit_file_metadata_t **metadata);
 
 #endif /* _ROPIT_FILE_METADATA_H_ */
