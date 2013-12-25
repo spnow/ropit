@@ -51,6 +51,8 @@ Elf32_Phdr* ElfGetProgramHeadersTable (ELF_FILE *elffile);
 Elf32_Shdr* ElfGetSectionHeadersTable (ELF_FILE *elffile);
 // get section table with all names
 char* ElfGetSectionNamesTable (ELF_FILE *elffile);
+// get base address of elf
+uint64_t ElfGetBaseAddr (ELF_FILE *elf_file);
 
 void elf_header_get_symbols (char *binaryName);
 

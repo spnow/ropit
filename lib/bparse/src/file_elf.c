@@ -18,6 +18,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
+#include <limits.h>
 
 #include <string.h>
 #include <elf.h>
@@ -225,6 +227,41 @@ char* ElfGetSectionNamesTable (ELF_FILE *elffile) {
     sectionNamesTable = fmap->map + sectionNamesTableHeader->sh_offset;
 
 	return sectionNamesTable;
+}
+
+// get base address of elf
+uint64_t ElfGetBaseAddr (ELF_FILE *elf_file)
+{
+    //
+    int idx_phdr;
+    uint64_t base_addr, p_vaddr;
+    //
+	Elf32_Ehdr *elf_hdr;
+	Elf32_Phdr *pheaders_table;
+
+    // get elf header
+    elf_hdr = ElfGetHeader (elf_file);
+    if (!elf_hdr) {
+        return NULL;
+    }
+
+    // get program headers table
+    pheaders_table = ElfGetProgramHeadersTable (elf_file);
+    if (!pheaders_table) {
+        return NULL;
+    }
+
+    // search for lowest LOAD section
+    base_addr = ULLONG_MAX;
+    for (idx_phdr = 0; idx_phdr < elf_hdr->e_phnum; idx_phdr++) {
+        if (pheaders_table[idx_phdr].p_type & PT_LOAD) {
+            p_vaddr = pheaders_table[idx_phdr].p_vaddr;
+            if (p_vaddr < base_addr && p_vaddr != 0)
+                base_addr = pheaders_table[idx_phdr].p_vaddr;
+        }
+    }
+
+    return base_addr;
 }
 
 void elf_header_get_imports (char *binaryName) {
