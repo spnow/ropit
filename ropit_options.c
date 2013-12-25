@@ -42,6 +42,7 @@ void usage(char *program)
     printf("Usage: %s [options]\n\n", program);
     printf("GENERAL:\n");
     printf("    --help , -h           : help\n");
+    printf("    --base , -b           : use base address toggle\n");
     printf("INPUT:\n");
     printf("    --in [filename] , -i   : Name of input file\n");
     /*
