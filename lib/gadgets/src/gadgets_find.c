@@ -256,6 +256,9 @@ int gadgets_find_in_elf (char *filename) {
         goto out_error;
     }
 
+    // get base address
+    plugin->base_addr = ElfGetBaseAddr(elf_file);
+
     for (idx_program_segment = 0; idx_program_segment < elf_header->e_phnum; idx_program_segment++) {
         if (program_headers_table[idx_program_segment].p_flags & PF_X) {
             gadgets_find (plugin, elf_file->fmap->map + program_headers_table[idx_program_segment].p_offset,
@@ -313,6 +316,9 @@ int gadgets_find_in_pe (char *filename) {
         debug_printf (MESSAGE_ERROR, stderr, "error: gadgets_find_in_pe(): Failed init gadget plugin\n");
         goto out_error;
     }
+
+    // get base address
+    plugin->base_addr = PeGetBaseAddr (pefile);
 
     n_gadgets = 0;
     for (idx_section = 0; idx_section < nt_header->FileHeader.NumberOfSections; idx_section++) {

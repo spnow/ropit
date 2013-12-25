@@ -126,7 +126,7 @@ int gadget_cache_fwrite (FILE *fp, struct cache_t *cache, struct gadget_plugin_t
 
     // write base address
     if (base_written == 0) {
-        base = 0x8000000;
+        base = plugin->base_addr;
         base = file_to_host_order_by_size(base, sizeof(base));
         fwrite(&base, sizeof(base), 1, fp);
         base_written = 1;

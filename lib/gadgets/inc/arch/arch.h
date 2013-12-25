@@ -25,6 +25,8 @@ struct gadget_plugin_t {
     //
     char *rets;
     int n_rets;
+    // base address
+    uint64_t base_addr;
 
     // methods
 	int (*init)(void);
