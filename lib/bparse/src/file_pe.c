@@ -845,3 +845,20 @@ uint64_t PeResolveSymbols (uint64_t base, char **functions, uint64_t nFunctions)
     return 0;
 }
 
+// get PE base address
+uint64_t PeGetBaseAddr (PE_FILE *pe_file)
+{
+    IMAGE_NT_HEADERS *nt_hdr;
+
+    if (!pe_file) {
+        return -1;
+    }
+
+    // get nt headers
+    nt_hdr = PeGetNtHeader (pe_file);
+    if (!nt_hdr)
+        return -1;
+
+    return nt_hdr->OptionalHeader.ImageBase;
+}
+

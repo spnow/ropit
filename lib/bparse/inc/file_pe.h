@@ -98,6 +98,8 @@ extern "C"
     IMAGE_SECTION_HEADER* PeGetSectionHeaderTable (PE_FILE *pefile);
     // free loaded pe file
     void PeUnload(PE_FILE **pefile);
+    // get PE base address
+    uint64_t PeGetBaseAddr (PE_FILE *pe_file);
 
 
     // convert a relative virtual address into a virtual address
