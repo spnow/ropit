@@ -420,6 +420,12 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
             --start;
 
             // maximum intel instruction size is 15
+            // maximum instructions in a gadget is hardcoded to 8 here
+            /* TODO : Get more gadgets with n_backtrack_inst instructions
+             * Effectively, we stop at the first gadget which has
+             * n_backtrack_inst instructions while there might be multiple
+             * possibilities.
+             */
             if (n_backtrack_bytes >= 15 || n_backtrack_inst == 8)
                 break;
         }
