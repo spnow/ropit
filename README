@@ -16,3 +16,7 @@ Hope you enjoy it,
 Don't hesitate to mail me if you have any comment on it.
 
 m_101
+
+== Dependencies
+
+sudo apt-get install libtar-dev libbz2-dev
