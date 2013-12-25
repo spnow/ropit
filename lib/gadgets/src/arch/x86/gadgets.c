@@ -303,8 +303,6 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
         cache_init(&(caches[idx_caches]), 1024);
     }
 
-    gadget_cache_queue_set_file(&cache_queue, fp_cache);
-
     // init disasm
     x86_init(opt_none, NULL, NULL);
 
@@ -359,7 +357,7 @@ int _ropit_x86_find_gadgets (uint8_t *bytes, int len, int64_t *rets, int n_rets)
                     ++count_gadgets;
 
                     // get ret size
-                    sz_ret = x86_disasm(gadget_start, bytes + rets[idx_ret], 0, 0, &insn);
+                    sz_ret = x86_disasm(bytes + rets[idx_ret], 10, 0, 0, &insn);
                     x86_oplist_free(&insn);
 
                     // fill gadget structure
